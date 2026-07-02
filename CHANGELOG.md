@@ -3,6 +3,12 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.6] — 2026-07-02
+
+### Changed
+- Document the **“waiting for you”** indicator in the README (yellow highlight +
+  bell + Activity Bar count badge for sessions where Claude replied last).
+
 ## [0.1.5] — 2026-07-02
 
 ### Added
