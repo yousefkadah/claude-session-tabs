@@ -3,6 +3,13 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.12] — 2026-07-03
+
+### Fixed
+- Clicking a **closed** session now opens it beside your existing Claude tabs (their
+  editor column) instead of over the code editor. Already-open sessions still reveal
+  in place.
+
 ## [0.1.11] — 2026-07-03
 
 ### Fixed

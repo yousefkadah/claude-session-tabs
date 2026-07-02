@@ -43,7 +43,9 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
       void vscode.window.showInformationMessage('This session tab is already open.');
       return;
     }
-    await openById(node.entry.meta.id);
+    // Reveal an already-open session in place; open a closed one beside the Claude tabs.
+    const column = node.entry.open ? undefined : provider.getClaudeColumn();
+    await openById(node.entry.meta.id, column);
   });
 
   reg('claudeSessionTabs.closeTab', async (node?: TreeNode) => {
@@ -143,11 +145,10 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
       matchOnDetail: true,
     });
     if (pick) {
-      await openById(pick.id);
+      await openById(pick.id, provider.getEntry(pick.id)?.open ? undefined : provider.getClaudeColumn());
     }
   });
 
-  void provider; // reserved for future commands that inspect live entries
 }
 
 /** Message handler for the webview strip, sharing the same services. */
@@ -165,7 +166,7 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
             void vscode.window.showInformationMessage('This session tab is already open.');
             return;
           }
-          void openById(msg.id);
+          void openById(msg.id, e?.open ? undefined : provider.getClaudeColumn());
           break;
         }
         case 'close': {
@@ -207,12 +208,13 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
   };
 }
 
-async function openById(sessionId: string): Promise<void> {
-  // Pass ViewColumn.Active so Claude reveals/opens the session as the active editor
-  // tab. Without a column, the current build calls setPreferredLocation('panel'),
-  // which fails to focus an existing session's tab.
+async function openById(sessionId: string, column?: vscode.ViewColumn): Promise<void> {
+  // For an already-open session, pass ViewColumn.Active so Claude reveals/focuses it
+  // in place. For a closed one, pass the Claude tabs' column so it opens beside them
+  // rather than over the code editor.
+  const target = column ?? vscode.ViewColumn.Active;
   try {
-    await vscode.commands.executeCommand('claude-vscode.editor.open', sessionId, undefined, vscode.ViewColumn.Active);
+    await vscode.commands.executeCommand('claude-vscode.editor.open', sessionId, undefined, target);
   } catch {
     try {
       await vscode.commands.executeCommand('claude-vscode.primaryEditor.open', sessionId);
