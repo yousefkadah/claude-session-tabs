@@ -22,26 +22,24 @@ export function activate(context: vscode.ExtensionContext): void {
     showCollapseAll: true,
     canSelectMany: true,
   };
-  // Our own container, plus a mirror inside the Claude Code sidebar (when present).
-  const view = vscode.window.createTreeView('claudeSessionTabs', treeOptions);
-  const inlineView = vscode.window.createTreeView('claudeSessionTabsInline', treeOptions);
-  context.subscriptions.push(view, inlineView, provider, groups);
-
-  // Persist group collapse/expand from either tree view.
-  for (const v of [view, inlineView]) {
-    context.subscriptions.push(
-      v.onDidCollapseElement((e) => {
-        if (e.element instanceof GroupTreeNode && e.element.group) {
-          void groups.setCollapsed(e.element.group.id, true);
-        }
-      }),
-      v.onDidExpandElement((e) => {
-        if (e.element instanceof GroupTreeNode && e.element.group) {
-          void groups.setCollapsed(e.element.group.id, false);
-        }
-      }),
-    );
-  }
+  // Single home: the tree lives inside the Claude Code sidebar container
+  // ('claude-sessions-sidebar', shown when the Claude Code extension is active).
+  const view = vscode.window.createTreeView('claudeSessionTabsInline', treeOptions);
+  context.subscriptions.push(
+    view,
+    provider,
+    groups,
+    view.onDidCollapseElement((e) => {
+      if (e.element instanceof GroupTreeNode && e.element.group) {
+        void groups.setCollapsed(e.element.group.id, true);
+      }
+    }),
+    view.onDidExpandElement((e) => {
+      if (e.element instanceof GroupTreeNode && e.element.group) {
+        void groups.setCollapsed(e.element.group.id, false);
+      }
+    }),
+  );
 
   // Tracks deactivation so async setup (below) doesn't register after teardown.
   let disposed = false;

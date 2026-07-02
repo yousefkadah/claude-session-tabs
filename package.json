@@ -38,13 +38,6 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
-      "activitybar": [
-        {
-          "id": "claudeSessionTabsContainer",
-          "title": "Claude Tabs",
-          "icon": "resources/claude-tabs.svg"
-        }
-      ],
       "panel": [
         {
           "id": "claudeSessionTabsStrip",
@@ -54,13 +47,6 @@
       ]
     },
     "views": {
-      "claudeSessionTabsContainer": [
-        {
-          "id": "claudeSessionTabs",
-          "name": "Sessions",
-          "icon": "resources/claude-tabs.svg"
-        }
-      ],
       "claudeSessionTabsStrip": [
         {
           "id": "claudeSessionTabsStripView",
@@ -78,7 +64,7 @@
     },
     "viewsWelcome": [
       {
-        "view": "claudeSessionTabs",
+        "view": "claudeSessionTabsInline",
         "contents": "No Claude Code sessions found for this workspace yet.\n\nOpen a conversation in the Claude Code panel, then [refresh](command:claudeSessionTabs.refresh).\n\n[New group](command:claudeSessionTabs.newGroup)"
       }
     ],
@@ -283,7 +269,7 @@
           {
             "id": "openSessions",
             "title": "Open the Sessions view",
-            "description": "Click the __Claude Tabs__ icon in the Activity Bar to see every Claude Code conversation in this workspace, grouped and color-coded.\n[Open Sessions](command:workbench.view.extension.claudeSessionTabsContainer)",
+            "description": "Open the __Claude Code__ sidebar — the __Session Tabs__ view lists every conversation in this workspace, grouped and color-coded.\n[Open Session Tabs](command:claudeSessionTabsInline.focus)",
             "media": { "markdown": "media/walkthrough-sessions.md" }
           },
           {

@@ -39,7 +39,7 @@ npm install
 npm run compile      # or: npm run watch
 ```
 
-Then press **F5** ("Run Extension") to launch an Extension Development Host. Open the **Claude Tabs** icon in the Activity Bar. Start or open a Claude Code conversation and it appears in the list.
+Then press **F5** ("Run Extension") to launch an Extension Development Host. Open the **Claude Code** sidebar — the **Session Tabs** view appears there (and the horizontal **Claude Tabs** strip is in the bottom panel). Start or open a Claude Code conversation and it shows up in the list.
 
 Type-check without building: `npm run typecheck`.
 
