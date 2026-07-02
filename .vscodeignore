@@ -1,10 +1,14 @@
 .vscode/**
+.github/**
 src/**
+test/**
 node_modules/**
 scripts/**
 esbuild.js
 tsconfig.json
 DESIGN.md
+PUBLISHING.md
+dist/smoke.cjs
 **/*.map
 **/*.ts
 **/*.vsix
