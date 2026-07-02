@@ -3,6 +3,7 @@ import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
 import { SessionTreeProvider, TreeNode } from './view/sessionTree';
 import { StripHandlers } from './view/strip/stripView';
+import { showSubagentPanel } from './view/subagent/subagentPanel';
 import { formatRelative, truncate } from './util/format';
 
 const COLORS: { label: string; id: string }[] = [
@@ -51,6 +52,12 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
   reg('claudeSessionTabs.closeTab', async (node?: TreeNode) => {
     if (node?.kind === 'session' && node.entry.live) {
       await vscode.window.tabGroups.close(node.entry.live.tab);
+    }
+  });
+
+  reg('claudeSessionTabs.openSubagent', async (node?: TreeNode) => {
+    if (node?.kind === 'subagent') {
+      await showSubagentPanel(node.sub);
     }
   });
 

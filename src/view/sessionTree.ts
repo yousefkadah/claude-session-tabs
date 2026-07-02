@@ -22,6 +22,14 @@ function themeColorVar(id: string): string {
 /** A transcript modified within this window is treated as actively "working". */
 const WORKING_MS = 15_000;
 
+/** A subagent whose transcript changed within this window is treated as still running.
+ * Wider than WORKING_MS to tolerate gaps while a subagent waits on a long tool call. */
+const SUBAGENT_ACTIVE_MS = 60_000;
+
+function isSubagentRunning(s: SubagentInfo): boolean {
+  return Date.now() - s.mtimeMs < SUBAGENT_ACTIVE_MS;
+}
+
 /**
  * Session status derived from what we can observe:
  * - closed: no live tab.
@@ -348,7 +356,10 @@ export class SessionTreeProvider
       return element.entries.map((e) => new SessionTreeNode(e));
     }
     if (element.kind === 'session') {
-      return element.entry.subagents.map((s) => new SubagentTreeNode(s, element.entry.meta.id));
+      // Only surface subagents that are still active — finished ones are just noise.
+      return element.entry.subagents
+        .filter(isSubagentRunning)
+        .map((s) => new SubagentTreeNode(s, element.entry.meta.id));
     }
     return [];
   }
@@ -379,23 +390,21 @@ export class SessionTreeProvider
 
   private subagentItem(node: SubagentTreeNode): vscode.TreeItem {
     const s = node.sub;
-    const running = Date.now() - s.mtimeMs < WORKING_MS;
     const label = s.description || s.agentType;
     const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
     item.id = 'sub:' + node.sessionId + ':' + s.agentId;
-    item.description = s.agentType + (running ? '' : ' · ' + formatRelative(s.mtimeMs));
-    item.iconPath = running
-      ? new vscode.ThemeIcon('sync', new vscode.ThemeColor('charts.blue'))
-      : new vscode.ThemeIcon('robot');
+    item.description = s.agentType;
+    item.iconPath = new vscode.ThemeIcon('sync', new vscode.ThemeColor('charts.blue'));
     item.contextValue = 'subagent';
     const md = new vscode.MarkdownString();
     md.supportThemeIcons = true;
-    md.appendMarkdown(`$(robot) **${escapeMd(s.agentType)}**${running ? '  ·  $(sync) running' : ''}\n\n`);
+    md.appendMarkdown(`$(robot) **${escapeMd(s.agentType)}**  ·  $(sync) running\n\n`);
     if (s.description) {
       md.appendMarkdown(`${escapeMd(s.description)}\n\n`);
     }
     md.appendMarkdown(`$(history) ${formatRelative(s.mtimeMs)}`);
     item.tooltip = md;
+    item.command = { command: 'claudeSessionTabs.openSubagent', title: 'Open Subagent', arguments: [node] };
     return item;
   }
 
@@ -436,7 +445,8 @@ export class SessionTreeProvider
 
   private sessionItem(node: SessionTreeNode): vscode.TreeItem {
     const e = node.entry;
-    const collapsible = e.subagents.length
+    // Expandable only when there's a live subagent to show.
+    const collapsible = e.subagents.some(isSubagentRunning)
       ? vscode.TreeItemCollapsibleState.Collapsed
       : vscode.TreeItemCollapsibleState.None;
     const item = new vscode.TreeItem(e.meta.title || 'Claude Code', collapsible);

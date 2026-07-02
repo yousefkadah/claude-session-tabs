@@ -143,11 +143,12 @@ export class SessionStore {
     const subs: SubagentInfo[] = [];
     for (const f of files) {
       const agentId = f.replace(/^agent-/, '').replace(/\.meta\.json$/, '');
+      const transcript = path.join(subDir, `agent-${agentId}.jsonl`);
       try {
         const meta = JSON.parse(await fs.readFile(path.join(subDir, f), 'utf8'));
         let mtimeMs = dirMtime;
         try {
-          mtimeMs = (await fs.stat(path.join(subDir, `agent-${agentId}.jsonl`))).mtimeMs;
+          mtimeMs = (await fs.stat(transcript)).mtimeMs;
         } catch {
           // transcript not written yet
         }
@@ -155,6 +156,7 @@ export class SessionStore {
           agentId,
           agentType: typeof meta.agentType === 'string' ? meta.agentType : 'agent',
           description: typeof meta.description === 'string' ? meta.description : '',
+          filePath: transcript,
           mtimeMs,
         });
       } catch {

@@ -44,6 +44,8 @@ export interface SubagentInfo {
   agentId: string;
   agentType: string;
   description: string;
+  /** Absolute path to the subagent's transcript (agent-<id>.jsonl). */
+  filePath: string;
   /** Last activity of the subagent's transcript (ms). "running" is derived from this at render time. */
   mtimeMs: number;
 }

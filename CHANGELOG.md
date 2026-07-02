@@ -3,6 +3,16 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.15] — 2026-07-03
+
+### Changed
+- Only **active** subagents are shown under a session (recently running); finished ones
+  are hidden, and a session is expandable only when it has a live subagent.
+
+### Added
+- **Click a subagent** to open a read-only panel with its task and what it did (its text
+  output and the tools it called).
+
 ## [0.1.14] — 2026-07-03
 
 ### Added

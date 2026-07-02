@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -156,6 +156,11 @@
         "title": "Start New Session Here",
         "category": "Claude Code Tabs",
         "icon": "$(add)"
+      },
+      {
+        "command": "claudeSessionTabs.openSubagent",
+        "title": "Open Subagent",
+        "category": "Claude Code Tabs"
       }
     ],
     "menus": {
@@ -245,6 +250,10 @@
         },
         {
           "command": "claudeSessionTabs.openSession",
+          "when": "false"
+        },
+        {
+          "command": "claudeSessionTabs.openSubagent",
           "when": "false"
         },
         {

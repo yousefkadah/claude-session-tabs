@@ -25,7 +25,7 @@
 
 - **🗂️ Groups** — create named, colored groups and drag sessions between them, or **start a new session straight into a group** with the group's `+` button. They collapse and persist per workspace, just like Chrome tab groups.
 - **🔄 Live progress & attention** — sessions Claude is **actively working** show a reload icon; sessions where Claude **asked you a question or plan and is waiting** float to the top with a **bell + count badge** on the icon. All inferred from the transcript (Claude's own state isn't exposed to extensions), so working is exact and "waiting" is a strong heuristic.
-- **🤖 Subagents** — expand a session to see the subagents Claude spawned inside it (agent type + task), each with a live spinner while it's still running.
+- **🤖 Live subagents** — expand a session to see the subagents Claude is **currently running** inside it (finished ones are hidden); **click one** to open a panel of its task and what it did.
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
 - **🟢 Live status** — at a glance: **active** (green), **working** (🔄 blue), **waiting for you** (🔔 yellow), **open** (blue), **closed** (outline).
 - **📌 Pinning** — keep the sessions you return to at the top.
