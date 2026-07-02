@@ -107,6 +107,11 @@ export class SessionTreeProvider
     this.pendingGroup = { groupId, since: Date.now(), before };
   }
 
+  /** The editor column where existing Claude tabs live, so a new session opens beside them. */
+  getClaudeColumn(): vscode.ViewColumn | undefined {
+    return this.liveTabs()[0]?.viewColumn;
+  }
+
   /**
    * Resolve the pending "new session in group" request. Returns the tab we've
    * latched onto (so build() can show it in the group before its id stabilizes).

@@ -62,7 +62,7 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     }
     // Queue the group; the next new session that appears joins it (after its first message).
     provider.setPendingGroup(node.group.id);
-    await startNewConversation();
+    await startNewConversation(provider.getClaudeColumn());
     void vscode.window.showInformationMessage(`The next new session will be added to "${node.group.name}".`);
   });
 
@@ -229,13 +229,18 @@ async function openById(sessionId: string): Promise<void> {
   }
 }
 
-/** Open a fresh Claude conversation as the active editor tab so we can detect it. */
-async function startNewConversation(): Promise<void> {
+/**
+ * Open a fresh Claude conversation as an editor tab so we can detect it. Opens in
+ * `column` (where the existing Claude tabs live) when known, so the new session
+ * lands beside them instead of over the code editor.
+ */
+async function startNewConversation(column?: vscode.ViewColumn): Promise<void> {
+  const target = column ?? vscode.ViewColumn.Active;
   try {
-    await vscode.commands.executeCommand('claude-vscode.primaryEditor.open');
+    await vscode.commands.executeCommand('claude-vscode.editor.open', undefined, undefined, target);
   } catch {
     try {
-      await vscode.commands.executeCommand('claude-vscode.editor.open', undefined, undefined, vscode.ViewColumn.Active);
+      await vscode.commands.executeCommand('claude-vscode.primaryEditor.open');
     } catch {
       void vscode.window.showErrorMessage(
         'Could not start a new Claude session. Make sure the Claude Code extension is installed.',

@@ -3,6 +3,12 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.11] — 2026-07-03
+
+### Fixed
+- A new session started from a group now opens **beside your existing Claude tabs**
+  (in their editor column) instead of over the code editor.
+
 ## [0.1.10] — 2026-07-03
 
 ### Fixed
