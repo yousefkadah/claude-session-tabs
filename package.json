@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.6",
+  "version": "0.1.7",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -150,6 +150,12 @@
         "title": "Delete Group",
         "category": "Claude Code Tabs",
         "icon": "$(trash)"
+      },
+      {
+        "command": "claudeSessionTabs.newSessionInGroup",
+        "title": "Start New Session Here",
+        "category": "Claude Code Tabs",
+        "icon": "$(add)"
       }
     ],
     "menus": {
@@ -171,6 +177,16 @@
         }
       ],
       "view/item/context": [
+        {
+          "command": "claudeSessionTabs.newSessionInGroup",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "group": "inline@0"
+        },
+        {
+          "command": "claudeSessionTabs.newSessionInGroup",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "group": "0_new@1"
+        },
         {
           "command": "claudeSessionTabs.togglePin",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
@@ -223,6 +239,10 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "claudeSessionTabs.newSessionInGroup",
+          "when": "false"
+        },
         {
           "command": "claudeSessionTabs.openSession",
           "when": "false"

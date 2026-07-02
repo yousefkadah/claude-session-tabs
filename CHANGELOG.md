@@ -3,6 +3,22 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.7] — 2026-07-03
+
+### Added
+- **Start a new session in a group** — each group has a `+` action that opens a new
+  Claude conversation; it joins the group once it has its first message.
+
+### Fixed
+- Clicking a session now reveals it as the **active editor tab** (opens in the active
+  column instead of being pushed to the panel).
+
+### Removed
+- The "waiting for you" indicator. Claude's needs-action state (the blue dot on its
+  tab) is a private tab icon that the VS Code API does not expose to other extensions,
+  and the "who spoke last" heuristic was too noisy (false positives), so the alert
+  was removed rather than shipped inaccurate.
+
 ## [0.1.6] — 2026-07-02
 
 ### Changed

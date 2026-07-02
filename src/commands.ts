@@ -56,6 +56,18 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     await createGroupInteractive(groups);
   });
 
+  reg('claudeSessionTabs.newSessionInGroup', async (node?: TreeNode) => {
+    if (node?.kind !== 'group' || !node.group) {
+      return;
+    }
+    // Queue the group; the next new session that appears joins it (after its first message).
+    provider.setPendingGroup(node.group.id);
+    await startNewConversation();
+    void vscode.window.showInformationMessage(
+      `New session will join "${node.group.name}" once it has its first message.`,
+    );
+  });
+
   reg('claudeSessionTabs.renameGroup', async (node?: TreeNode) => {
     if (node?.kind !== 'group' || !node.group) {
       return;
@@ -187,15 +199,37 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
 }
 
 async function openById(sessionId: string): Promise<void> {
+  // Pass ViewColumn.Active so Claude reveals/opens the session as the active editor
+  // tab. Without a column, the current build calls setPreferredLocation('panel'),
+  // which fails to focus an existing session's tab.
   try {
-    await vscode.commands.executeCommand('claude-vscode.editor.open', sessionId);
+    await vscode.commands.executeCommand('claude-vscode.editor.open', sessionId, undefined, vscode.ViewColumn.Active);
   } catch {
     try {
-      const uri = `vscode://anthropic.claude-code/open?session=${encodeURIComponent(sessionId)}`;
-      await vscode.env.openExternal(vscode.Uri.parse(uri));
+      await vscode.commands.executeCommand('claude-vscode.primaryEditor.open', sessionId);
+    } catch {
+      try {
+        const uri = `vscode://anthropic.claude-code/open?session=${encodeURIComponent(sessionId)}`;
+        await vscode.env.openExternal(vscode.Uri.parse(uri));
+      } catch {
+        void vscode.window.showErrorMessage(
+          'Could not open the session. Make sure the Claude Code extension is installed and enabled.',
+        );
+      }
+    }
+  }
+}
+
+/** Open a fresh Claude conversation as the active editor tab so we can detect it. */
+async function startNewConversation(): Promise<void> {
+  try {
+    await vscode.commands.executeCommand('claude-vscode.primaryEditor.open');
+  } catch {
+    try {
+      await vscode.commands.executeCommand('claude-vscode.editor.open', undefined, undefined, vscode.ViewColumn.Active);
     } catch {
       void vscode.window.showErrorMessage(
-        'Could not open the session. Make sure the Claude Code extension is installed and enabled.',
+        'Could not start a new Claude session. Make sure the Claude Code extension is installed.',
       );
     }
   }

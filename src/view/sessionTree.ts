@@ -20,9 +20,10 @@ function themeColorVar(id: string): string {
 }
 
 /**
- * Session status. 'waiting' means Claude sent the last message — i.e. it's your
- * turn / the session needs action from you. (Claude's real internal permission
- * state isn't exposed to other extensions, so "who spoke last" is the signal.)
+ * Session status from what VS Code actually exposes. Claude's "needs action" state
+ * (the blue dot on its tab) is a private tab icon that the extension API does NOT
+ * expose to other extensions, and there's no reliable transcript signal for it, so
+ * we don't try to mirror it — we only report what we can see: active / open / closed.
  */
 function statusOf(e: SessionEntry): SessionStatus {
   if (!e.open) {
@@ -31,16 +32,10 @@ function statusOf(e: SessionEntry): SessionStatus {
   if (e.live?.isActive) {
     return 'active';
   }
-  if (e.meta.lastRole === 'assistant') {
-    return 'waiting';
-  }
-  if (e.meta.lastRole === 'user') {
-    return 'working';
-  }
   return 'open';
 }
 
-/** Sort priority: pinned, then the active tab, then sessions waiting on you, then the rest. */
+/** Sort priority: pinned, then the active tab, then open, then closed. */
 function rank(e: SessionEntry): number {
   if (e.pinned) {
     return 0;
@@ -48,12 +43,10 @@ function rank(e: SessionEntry): number {
   switch (statusOf(e)) {
     case 'active':
       return 1;
-    case 'waiting':
-      return 2;
     case 'closed':
-      return 4;
-    default:
       return 3;
+    default:
+      return 2;
   }
 }
 
@@ -92,8 +85,36 @@ export class SessionTreeProvider
   private entries: SessionEntry[] = [];
   private maxRecent = 25;
   private showClosed = true;
+  /** When the user starts a new session from a group, the next fresh session joins it. */
+  private pendingGroup?: { groupId: string; since: number };
+  /** Real session ids seen in the previous build — used to detect a freshly-created one. */
+  private seenIds = new Set<string>();
 
   constructor(private store: SessionStore, private groups: GroupStore) {}
+
+  /** Queue the next newly-created session to be added to this group (expires in 90s). */
+  setPendingGroup(groupId: string): void {
+    this.pendingGroup = { groupId, since: Date.now() };
+  }
+
+  private resolvePendingGroup(): void {
+    const p = this.pendingGroup;
+    if (!p) {
+      return;
+    }
+    if (Date.now() - p.since > 90_000 || !this.groups.hasGroup(p.groupId)) {
+      this.pendingGroup = undefined;
+      return;
+    }
+    // A newly-appeared, open, transcript-backed session that isn't grouped yet.
+    const fresh = this.entries.find(
+      (e) => e.open && e.meta.filePath && !this.seenIds.has(e.meta.id) && !this.groups.groupOf(e.meta.id),
+    );
+    if (fresh) {
+      this.pendingGroup = undefined;
+      void this.groups.assign(fresh.meta.id, p.groupId);
+    }
+  }
 
   dispose(): void {
     this._onDidChangeTreeData.dispose();
@@ -169,6 +190,8 @@ export class SessionTreeProvider
       return b.meta.mtimeMs - a.meta.mtimeMs;
     });
     this.entries = entries;
+    this.resolvePendingGroup(); // uses seenIds from the previous build
+    this.seenIds = new Set(entries.filter((e) => e.meta.filePath).map((e) => e.meta.id));
     this._onDidBuild.fire();
   }
 
@@ -277,11 +300,6 @@ export class SessionTreeProvider
     return node.kind === 'group' ? this.groupItem(node) : this.sessionItem(node);
   }
 
-  /** How many open sessions are waiting on you (Claude spoke last). Drives the view badge. */
-  getAttentionCount(): number {
-    return this.entries.filter((e) => statusOf(e) === 'waiting').length;
-  }
-
   private sessionSnapshot(e: SessionEntry): StripSession {
     const m = e.meta;
     return {
@@ -350,10 +368,6 @@ export class SessionTreeProvider
     switch (statusOf(e)) {
       case 'active':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
-      case 'waiting':
-        return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
-      case 'working':
-        return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.orange'));
       case 'open':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.blue'));
       default:
@@ -377,8 +391,6 @@ export class SessionTreeProvider
 
     const STATUS_LABEL: Record<SessionStatus, string> = {
       active: '$(circle-filled) Active',
-      waiting: '$(bell-dot) Waiting for you',
-      working: '$(circle-filled) Working…',
       open: '$(circle-filled) Open',
       closed: '$(circle-outline) Closed',
     };
