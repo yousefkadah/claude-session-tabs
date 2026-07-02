@@ -3,11 +3,16 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.3] — 2026-07-02
+
+### Fixed
+- Complete the rename — the bottom-panel title and command category now read
+  **Claude Code Tabs** too (0.1.2 changed only the display name).
+
 ## [0.1.2] — 2026-07-02
 
 ### Changed
-- Renamed the extension to **Claude Code Tabs** — display name, panel title, and
-  command category are now consistent.
+- Renamed the extension to **Claude Code Tabs** (display name).
 
 ## [0.1.1] — 2026-07-02
 

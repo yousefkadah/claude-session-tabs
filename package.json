@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
