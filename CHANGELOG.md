@@ -3,6 +3,16 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.4] — 2026-07-02
+
+### Added
+- Restored the standalone **Claude Code Tabs** view in the Activity Bar, alongside
+  the mirror inside the Claude Code sidebar. Both share one data source.
+
+### Fixed
+- The right-click menu (rename / recolor / delete group, pin, move to group) and
+  the title actions (Search / New Group / Refresh) now work in **both** tree views.
+
 ## [0.1.3] — 2026-07-02
 
 ### Fixed

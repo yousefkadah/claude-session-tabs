@@ -55,14 +55,17 @@ Prefer a browser‑like strip? The **Claude Code Tabs** panel gives grouped tab 
    ext install yousefkadah.claude-session-tabs
    ```
 2. Make sure the **[Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)** extension is installed and you've opened at least one conversation.
-3. Open the **Claude Code** sidebar → the **Session Tabs** view. For the horizontal strip, open the bottom panel (`⌘J` / `Ctrl+J`) → **Claude Code Tabs**.
+3. Open the **Claude Code Tabs** icon in the Activity Bar (or find **Session Tabs** inside the Claude Code sidebar). For the horizontal strip, open the bottom panel (`⌘J` / `Ctrl+J`) → **Claude Code Tabs**.
 
 **Requirements:** VS Code `^1.84.0` (or a compatible fork) and the Anthropic **Claude Code** extension.
 
 ## 🧭 Where it lives
 
-- **Session Tabs** — a tree inside the **Claude Code** sidebar (appears while Claude Code is active).
-- **Claude Code Tabs** — a horizontal strip in the bottom **panel** (`⌘J` / `Ctrl+J`).
+- **Claude Code Tabs** (Activity Bar) — the dedicated **Sessions** tree, always available.
+- **Session Tabs** (Claude Code sidebar) — the same tree, mirrored inside Claude Code's own sidebar while it's active.
+- **Claude Code Tabs** (bottom **panel**, `⌘J` / `Ctrl+J`) — the horizontal Chrome‑style strip.
+
+All three share one data source and stay in sync — use whichever fits your flow.
 
 Right‑click any session or group for actions (pin, move to group, rename/recolor/delete group); use the view's title bar for **Search**, **New Group**, and **Refresh**.
 

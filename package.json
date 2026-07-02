@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.3",
+  "version": "0.1.4",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -38,6 +38,13 @@
   "main": "./dist/extension.js",
   "contributes": {
     "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "claudeSessionTabsContainer",
+          "title": "Claude Code Tabs",
+          "icon": "resources/claude-tabs.svg"
+        }
+      ],
       "panel": [
         {
           "id": "claudeSessionTabsStrip",
@@ -47,6 +54,13 @@
       ]
     },
     "views": {
+      "claudeSessionTabsContainer": [
+        {
+          "id": "claudeSessionTabs",
+          "name": "Sessions",
+          "icon": "resources/claude-tabs.svg"
+        }
+      ],
       "claudeSessionTabsStrip": [
         {
           "id": "claudeSessionTabsStripView",
@@ -63,6 +77,10 @@
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "claudeSessionTabs",
+        "contents": "No Claude Code sessions found for this workspace yet.\n\nOpen a conversation in the Claude Code panel, then [refresh](command:claudeSessionTabs.refresh).\n\n[New group](command:claudeSessionTabs.newGroup)"
+      },
       {
         "view": "claudeSessionTabsInline",
         "contents": "No Claude Code sessions found for this workspace yet.\n\nOpen a conversation in the Claude Code panel, then [refresh](command:claudeSessionTabs.refresh).\n\n[New group](command:claudeSessionTabs.newGroup)"
@@ -138,69 +156,69 @@
       "view/title": [
         {
           "command": "claudeSessionTabs.search",
-          "when": "view == claudeSessionTabsInline",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/",
           "group": "navigation@1"
         },
         {
           "command": "claudeSessionTabs.newGroup",
-          "when": "view == claudeSessionTabsInline",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/",
           "group": "navigation@2"
         },
         {
           "command": "claudeSessionTabs.refresh",
-          "when": "view == claudeSessionTabsInline",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/",
           "group": "navigation@3"
         }
       ],
       "view/item/context": [
         {
           "command": "claudeSessionTabs.togglePin",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /session/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "inline@1"
         },
         {
           "command": "claudeSessionTabs.closeTab",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /open/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /open/",
           "group": "inline@2"
         },
         {
           "command": "claudeSessionTabs.openSession",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /session/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "1_open@1"
         },
         {
           "command": "claudeSessionTabs.assignToGroup",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /session/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "2_group@1"
         },
         {
           "command": "claudeSessionTabs.removeFromGroup",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /grouped/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /grouped/",
           "group": "2_group@2"
         },
         {
           "command": "claudeSessionTabs.togglePin",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /session/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "2_group@3"
         },
         {
           "command": "claudeSessionTabs.closeTab",
-          "when": "view == claudeSessionTabsInline && viewItem =~ /open/",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /open/",
           "group": "3_tab@1"
         },
         {
           "command": "claudeSessionTabs.renameGroup",
-          "when": "view == claudeSessionTabsInline && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
           "group": "1_edit@1"
         },
         {
           "command": "claudeSessionTabs.recolorGroup",
-          "when": "view == claudeSessionTabsInline && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
           "group": "1_edit@2"
         },
         {
           "command": "claudeSessionTabs.deleteGroup",
-          "when": "view == claudeSessionTabsInline && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
           "group": "9_danger@1"
         }
       ],
@@ -269,7 +287,7 @@
           {
             "id": "openSessions",
             "title": "Open the Sessions view",
-            "description": "Open the __Claude Code__ sidebar — the __Session Tabs__ view lists every conversation in this workspace, grouped and color-coded.\n[Open Session Tabs](command:claudeSessionTabsInline.focus)",
+            "description": "Open the __Claude Code Tabs__ view in the Activity Bar — it lists every conversation in this workspace, grouped and color-coded (it also appears inside the Claude Code sidebar).\n[Open Claude Code Tabs](command:workbench.view.extension.claudeSessionTabsContainer)",
             "media": {
               "markdown": "media/walkthrough-sessions.md"
             }
