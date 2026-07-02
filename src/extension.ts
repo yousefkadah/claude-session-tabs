@@ -48,6 +48,16 @@ export function activate(context: vscode.ExtensionContext): void {
   let disposed = false;
   context.subscriptions.push({ dispose: () => (disposed = true) });
 
+  // "needs-action" count on the view icon. Recomputed on rebuild AND on the timer,
+  // because working→needs-action is time-based (no file event fires when a session goes idle).
+  const updateBadge = (): void => {
+    const n = provider.getAttentionCount();
+    const badge =
+      n > 0 ? { value: n, tooltip: `${n} session${n === 1 ? '' : 's'} waiting for you` } : undefined;
+    primaryView.badge = badge;
+    inlineView.badge = badge;
+  };
+
   // Serialize rebuilds; coalesce bursts of tab events.
   let building = false;
   let pending = false;
@@ -60,10 +70,7 @@ export function activate(context: vscode.ExtensionContext): void {
     try {
       await provider.build();
       provider.refresh();
-      const n = provider.getFlaggedCount();
-      const badge = n > 0 ? { value: n, tooltip: `${n} flagged session${n === 1 ? '' : 's'}` } : undefined;
-      primaryView.badge = badge;
-      inlineView.badge = badge;
+      updateBadge();
     } finally {
       building = false;
       if (pending) {
@@ -110,7 +117,11 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Keep relative timestamps ("2m ago") current.
-  const timer = setInterval(() => provider.refresh(), 60_000);
+  // Frequent tick so working→idle→needs-action transitions (which are time-based) stay live.
+  const timer = setInterval(() => {
+    provider.refresh();
+    updateBadge();
+  }, 10_000);
   context.subscriptions.push({ dispose: () => clearInterval(timer) });
 
   registerCommands(context, services);

@@ -16,16 +16,7 @@ export class GroupStore implements vscode.Disposable {
   readonly onDidChange = this._onDidChange.event;
 
   constructor(private memento: vscode.Memento) {
-    this.state = memento.get<PersistedState>(KEY) ?? {
-      groups: [],
-      assignments: {},
-      pinned: [],
-      flagged: [],
-      version: 1,
-    };
-    if (!this.state.flagged) {
-      this.state.flagged = []; // migrate state saved before flags existed
-    }
+    this.state = memento.get<PersistedState>(KEY) ?? { groups: [], assignments: {}, pinned: [], version: 1 };
   }
 
   dispose(): void {
@@ -104,20 +95,6 @@ export class GroupStore implements vscode.Disposable {
       this.state.pinned.splice(i, 1);
     } else {
       this.state.pinned.push(sessionId);
-    }
-    await this.save();
-  }
-
-  isFlagged(sessionId: string): boolean {
-    return this.state.flagged.includes(sessionId);
-  }
-
-  async toggleFlag(sessionId: string): Promise<void> {
-    const i = this.state.flagged.indexOf(sessionId);
-    if (i >= 0) {
-      this.state.flagged.splice(i, 1);
-    } else {
-      this.state.flagged.push(sessionId);
     }
     await this.save();
   }

@@ -67,10 +67,11 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
   }
   .tab:hover { border-color: var(--vscode-focusBorder); }
   .tab.active { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); }
-  .tab.flagged {
+  .tab.needs-action {
     border-color: var(--vscode-charts-yellow);
     background: color-mix(in srgb, var(--vscode-charts-yellow) 18%, var(--vscode-editor-background));
   }
+  .tab.working { border-color: var(--vscode-charts-blue); }
   .tab.closed { opacity: 0.6; }
   .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-charts-blue); flex: 0 0 auto; }
   .tab .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -117,9 +118,12 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   const DOT = {
     active: 'var(--vscode-charts-green)',
+    working: 'var(--vscode-charts-blue)',
+    'needs-action': 'var(--vscode-charts-yellow)',
     open: 'var(--vscode-charts-blue)',
     closed: 'var(--vscode-descriptionForeground)',
   };
+  const GLYPH = { working: '↻', 'needs-action': '🔔' };
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
@@ -161,7 +165,7 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   function makeTab(s) {
     const t = document.createElement('div');
-    t.className = 'tab ' + s.status + (s.status === 'active' ? ' active' : '') + (s.flagged ? ' flagged' : '');
+    t.className = 'tab ' + s.status + (s.status === 'active' ? ' active' : '');
     t.draggable = true;
     t.addEventListener('dragstart', (ev) => ev.dataTransfer.setData('text/plain', s.id));
     t.addEventListener('click', () => vscode.postMessage({ type: 'open', id: s.id }));
@@ -169,10 +173,11 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
     t.addEventListener('mousemove', (ev) => positionPop(ev));
     t.addEventListener('mouseleave', hidePop);
 
-    if (s.flagged) {
-      const bell = document.createElement('span');
-      bell.className = 'pin'; bell.textContent = '🔔';
-      t.appendChild(bell);
+    const glyph = GLYPH[s.status];
+    if (glyph) {
+      const g = document.createElement('span');
+      g.className = 'pin'; g.textContent = glyph;
+      t.appendChild(g);
     } else {
       const dot = document.createElement('span');
       dot.className = 'dot';
@@ -192,9 +197,6 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
     const actions = document.createElement('span');
     actions.className = 'actions';
-    actions.appendChild(iconBtn('🔔', s.flagged ? 'Unflag' : 'Flag for attention', (ev) => {
-      ev.stopPropagation(); vscode.postMessage({ type: 'flag', id: s.id });
-    }));
     actions.appendChild(iconBtn(s.pinned ? '📍' : '📌', s.pinned ? 'Unpin' : 'Pin', (ev) => {
       ev.stopPropagation(); vscode.postMessage({ type: 'pin', id: s.id });
     }));
@@ -216,7 +218,7 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   function showPop(ev, s) {
     let html = '<div class="h">' + esc(s.title) + '</div>';
-    const statusLabel = { active: 'Active', open: 'Open', closed: 'Closed' }[s.status];
+    const statusLabel = { active: 'Active', working: 'Working…', 'needs-action': 'Waiting for you', open: 'Open', closed: 'Closed' }[s.status];
     html += '<div class="row"><span class="k">' + statusLabel + (s.pinned ? ' · Pinned' : '') + '</span></div>';
     if (s.lastUser) html += '<div class="row"><span class="k">You:</span> ' + esc(s.lastUser) + '</div>';
     if (s.lastAssistant) html += '<div class="row"><span class="k">Claude:</span> ' + esc(s.lastAssistant) + '</div>';

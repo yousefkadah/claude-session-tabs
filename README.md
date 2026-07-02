@@ -24,9 +24,9 @@
 ## ✨ Features
 
 - **🗂️ Groups** — create named, colored groups and drag sessions between them, or **start a new session straight into a group** with the group's `+` button. They collapse and persist per workspace, just like Chrome tab groups.
-- **🔔 Flag for attention** — mark any session as needing you; it gets a bell, floats to the top, and shows a **count badge** on the icon (a reliable, you‑controlled alternative — Claude's own needs‑action state isn't exposed to extensions).
+- **🔄 Live progress & attention** — sessions Claude is **actively working** show a reload icon; sessions where Claude **asked you a question or plan and is waiting** float to the top with a **bell + count badge** on the icon. All inferred from the transcript (Claude's own state isn't exposed to extensions), so working is exact and "waiting" is a strong heuristic.
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
-- **🟢 Live status** — colored dots for **active** (green), **open** (blue), and **closed** (outline), matched to your live editor tabs.
+- **🟢 Live status** — at a glance: **active** (green), **working** (🔄 blue), **waiting for you** (🔔 yellow), **open** (blue), **closed** (outline).
 - **📌 Pinning** — keep the sessions you return to at the top.
 - **🔎 Search** — fuzzy‑find any conversation in the workspace by title or last prompt, then jump to it.
 - **↔️ Two surfaces, one data source** — a tree inside the Claude Code sidebar **and** a horizontal Chrome‑style strip in the bottom panel, always in sync.

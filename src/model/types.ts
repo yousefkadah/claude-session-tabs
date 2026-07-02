@@ -17,7 +17,8 @@ export interface SessionMeta {
   gitBranch?: string;
   cwd?: string;
   /** Role of the last user/assistant message — 'assistant' means it's your turn. */
-  lastRole?: 'user' | 'assistant';
+  /** The last turn was Claude asking the user (AskUserQuestion / ExitPlanMode), unanswered. */
+  pendingAsk: boolean;
   /** File modification time in ms since epoch. */
   mtimeMs: number;
   messageCount: number;
@@ -44,8 +45,6 @@ export interface SessionEntry {
   open: boolean;
   live?: LiveTab;
   pinned: boolean;
-  /** User-marked "needs my attention" flag. */
-  flagged: boolean;
   groupId: string | null;
 }
 
@@ -64,14 +63,12 @@ export interface PersistedState {
   /** sessionId -> groupId */
   assignments: Record<string, string>;
   pinned: string[];
-  /** session ids the user flagged as needing attention */
-  flagged: string[];
   version: number;
 }
 
 // --- Serializable DTOs posted to the webview strip ---
 
-export type SessionStatus = 'active' | 'open' | 'closed';
+export type SessionStatus = 'active' | 'working' | 'needs-action' | 'open' | 'closed';
 
 export interface StripSession {
   id: string;
@@ -79,7 +76,6 @@ export interface StripSession {
   short: string;
   open: boolean;
   pinned: boolean;
-  flagged: boolean;
   hasFile: boolean;
   status: SessionStatus;
   branch?: string;

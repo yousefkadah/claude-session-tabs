@@ -17,7 +17,8 @@ interface Acc {
   lastAssistantText?: string;
   gitBranch?: string;
   cwd?: string;
-  lastRole?: 'user' | 'assistant';
+  /** The last turn was Claude asking the user (AskUserQuestion / ExitPlanMode), unanswered. */
+  pendingAsk: boolean;
   messageCount: number;
   contextTokens: number;
   outputTokens: number;
@@ -34,7 +35,7 @@ export async function parseSession(
   mtimeMs: number,
 ): Promise<SessionMeta | null> {
   const id = path.basename(filePath, '.jsonl');
-  const acc: Acc = { messageCount: 0, contextTokens: 0, outputTokens: 0, sidechain: false };
+  const acc: Acc = { messageCount: 0, contextTokens: 0, outputTokens: 0, sidechain: false, pendingAsk: false };
   let approx = false;
 
   if (size <= FULL_LIMIT) {
@@ -75,7 +76,7 @@ export async function parseSession(
     lastAssistantText: acc.lastAssistantText,
     gitBranch: acc.gitBranch,
     cwd: acc.cwd,
-    lastRole: acc.lastRole,
+    pendingAsk: acc.pendingAsk,
     mtimeMs,
     messageCount: acc.messageCount,
     contextTokens: acc.contextTokens,
@@ -168,7 +169,7 @@ function processLines(lines: string[], acc: Acc): void {
         }
         break;
       case 'user': {
-        acc.lastRole = 'user';
+        acc.pendingAsk = false; // the user replied, so any pending question is answered
         const t = extractText(r.message?.content);
         if (t) {
           if (!acc.firstPrompt) {
@@ -180,8 +181,10 @@ function processLines(lines: string[], acc: Acc): void {
         break;
       }
       case 'assistant': {
-        acc.lastRole = 'assistant';
         acc.messageCount++;
+        if (hasAskTool(r.message?.content)) {
+          acc.pendingAsk = true; // Claude asked the user and is waiting on an answer
+        }
         const t = extractText(r.message?.content);
         if (t) {
           acc.lastAssistantText = t;
@@ -203,6 +206,23 @@ function processLines(lines: string[], acc: Acc): void {
 function num(v: unknown): number {
   const n = Number(v);
   return Number.isFinite(n) ? n : 0;
+}
+
+/** True if the message contains a tool call that blocks on the user (a question / plan approval). */
+const ASK_TOOLS = new Set(['AskUserQuestion', 'ExitPlanMode']);
+function hasAskTool(content: unknown): boolean {
+  if (!Array.isArray(content)) {
+    return false;
+  }
+  for (const b of content) {
+    if (b && typeof b === 'object' && (b as { type?: string }).type === 'tool_use') {
+      const name = (b as { name?: unknown }).name;
+      if (typeof name === 'string' && ASK_TOOLS.has(name)) {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /** Pull only human-visible text out of a message's content (skips thinking, tool calls, images). */

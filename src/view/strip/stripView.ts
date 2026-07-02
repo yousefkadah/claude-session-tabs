@@ -4,7 +4,7 @@ import { SessionTreeProvider } from '../sessionTree';
 import { renderStripHtml } from './stripHtml';
 
 export interface StripMessage {
-  type: 'open' | 'close' | 'pin' | 'flag' | 'move' | 'newGroup' | 'search' | 'refresh' | 'ready';
+  type: 'open' | 'close' | 'pin' | 'move' | 'newGroup' | 'search' | 'refresh' | 'ready';
   id?: string;
   groupId?: string | null;
 }

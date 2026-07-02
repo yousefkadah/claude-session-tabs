@@ -3,6 +3,24 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.13] — 2026-07-03
+
+### Added
+- **Live "working" indicator** — a session whose transcript changed in the last ~15s
+  shows a reload icon (Claude is generating). Reliable, based on file activity.
+- **Automatic "waiting for you"** — a session whose last turn ended on an unanswered
+  `AskUserQuestion` / `ExitPlanMode` (and isn't writing) is flagged with a bell, sorted
+  to the top, and drives a count badge on the view icon.
+
+### Removed
+- The manual **flag-for-attention** (bell on every row) — replaced by the automatic
+  detection above.
+
+### Fixed
+- Two brand-new "Claude Code" tabs in the same editor group no longer collide on a shared
+  synthetic id (which duplicated tree nodes and shared pin/group state).
+- Dropped dead `lastRole` parsing left over from the earlier waiting feature.
+
 ## [0.1.12] — 2026-07-03
 
 ### Fixed

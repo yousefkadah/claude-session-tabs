@@ -19,15 +19,30 @@ function themeColorVar(id: string): string {
   return `var(--vscode-${id.replace(/\./g, '-')})`;
 }
 
+/** A transcript modified within this window is treated as actively "working". */
+const WORKING_MS = 15_000;
+
 /**
- * Session status from what VS Code actually exposes. Claude's "needs action" state
- * (the blue dot on its tab) is a private tab icon that the extension API does NOT
- * expose to other extensions, and there's no reliable transcript signal for it, so
- * we don't try to mirror it — we only report what we can see: active / open / closed.
+ * Session status derived from what we can observe:
+ * - closed: no live tab.
+ * - needs-action: Claude ended its last turn on an unanswered question/plan (AskUserQuestion /
+ *   ExitPlanMode) and isn't currently writing — it's waiting on you.
+ * - working: the transcript was written in the last {@link WORKING_MS} — Claude is generating.
+ * - active: the tab you're currently viewing.
+ * - open: open but idle.
+ * (Claude's own needs-action tab icon isn't exposed to extensions, so we infer from the
+ * transcript; "working" is reliable, "needs-action" is a strong heuristic.)
  */
 function statusOf(e: SessionEntry): SessionStatus {
   if (!e.open) {
     return 'closed';
+  }
+  const writing = Date.now() - e.meta.mtimeMs < WORKING_MS;
+  if (e.meta.pendingAsk && !writing) {
+    return 'needs-action';
+  }
+  if (writing) {
+    return 'working';
   }
   if (e.live?.isActive) {
     return 'active';
@@ -35,21 +50,22 @@ function statusOf(e: SessionEntry): SessionStatus {
   return 'open';
 }
 
-/** Sort priority: pinned, then flagged, then the active tab, then open, then closed. */
+/** Sort priority: pinned, then needs-action, then working, then active, then open, then closed. */
 function rank(e: SessionEntry): number {
   if (e.pinned) {
     return 0;
   }
-  if (e.flagged) {
-    return 1;
-  }
   switch (statusOf(e)) {
-    case 'active':
+    case 'needs-action':
+      return 1;
+    case 'working':
       return 2;
-    case 'closed':
-      return 4;
-    default:
+    case 'active':
       return 3;
+    case 'closed':
+      return 5;
+    default:
+      return 4;
   }
 }
 
@@ -190,24 +206,26 @@ export class SessionTreeProvider
         open: !!match,
         live: match,
         pinned: this.groups.isPinned(meta.id),
-        flagged: this.groups.isFlagged(meta.id),
         groupId: this.groups.groupOf(meta.id),
       });
     }
 
-    // Brand-new tabs that don't yet have a resolvable transcript title.
+    // Brand-new tabs that don't yet have a resolvable transcript title. The synthIndex
+    // discriminator keeps ids unique when two new tabs share a label+column.
     let synthIndex = 0;
     for (const lt of live) {
       if (used.has(lt)) {
         continue;
       }
-      const id = `live:${lt.viewColumn ?? 0}:${lt.label}`;
+      const n = synthIndex++;
+      const id = `live:${lt.viewColumn ?? 0}:${lt.label}:${n}`;
       entries.push({
         meta: {
           id,
           filePath: '',
           title: lt.label || 'Claude Code',
-          mtimeMs: Number.MAX_SAFE_INTEGER - synthIndex++,
+          mtimeMs: Number.MAX_SAFE_INTEGER - n,
+          pendingAsk: false,
           messageCount: 0,
           contextTokens: 0,
           outputTokens: 0,
@@ -216,7 +234,6 @@ export class SessionTreeProvider
         open: true,
         live: lt,
         pinned: this.groups.isPinned(id),
-        flagged: this.groups.isFlagged(id),
         groupId: this.groups.groupOf(id),
       });
     }
@@ -352,7 +369,6 @@ export class SessionTreeProvider
       short: truncate(m.title || 'Claude Code', 24),
       open: e.open,
       pinned: e.pinned,
-      flagged: e.flagged,
       hasFile: !!m.filePath,
       status: statusOf(e),
       branch: m.gitBranch && m.gitBranch !== 'HEAD' ? m.gitBranch : undefined,
@@ -396,9 +412,6 @@ export class SessionTreeProvider
 
   private sessionDescription(e: SessionEntry): string {
     const parts: string[] = [];
-    if (e.flagged) {
-      parts.push('🔔');
-    }
     if (e.pinned) {
       parts.push('📌');
     }
@@ -413,10 +426,11 @@ export class SessionTreeProvider
   }
 
   private sessionIcon(e: SessionEntry): vscode.ThemeIcon {
-    if (e.flagged) {
-      return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
-    }
     switch (statusOf(e)) {
+      case 'needs-action':
+        return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
+      case 'working':
+        return new vscode.ThemeIcon('sync', new vscode.ThemeColor('charts.blue'));
       case 'active':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
       case 'open':
@@ -426,16 +440,15 @@ export class SessionTreeProvider
     }
   }
 
-  /** Number of sessions the user flagged for attention — drives the view badge. */
-  getFlaggedCount(): number {
-    return this.entries.filter((e) => e.flagged).length;
+  /** Number of open sessions waiting on the user (needs-action) — drives the view badge. */
+  getAttentionCount(): number {
+    return this.entries.filter((e) => statusOf(e) === 'needs-action').length;
   }
 
   private sessionContext(e: SessionEntry): string {
     const flags = ['session'];
     flags.push(e.open ? 'open' : 'closed');
     flags.push(e.pinned ? 'pinned' : 'unpinned');
-    flags.push(e.flagged ? 'flagged' : 'unflagged');
     flags.push(e.groupId ? 'grouped' : 'ungrouped');
     return flags.join(' ');
   }
@@ -448,13 +461,12 @@ export class SessionTreeProvider
 
     const STATUS_LABEL: Record<SessionStatus, string> = {
       active: '$(circle-filled) Active',
+      working: '$(sync) Working…',
+      'needs-action': '$(bell-dot) Waiting for you',
       open: '$(circle-filled) Open',
       closed: '$(circle-outline) Closed',
     };
     md.appendMarkdown(STATUS_LABEL[statusOf(e)]);
-    if (e.flagged) {
-      md.appendMarkdown('  ·  $(bell-dot) Flagged');
-    }
     if (e.pinned) {
       md.appendMarkdown('  ·  $(pinned) Pinned');
     }
