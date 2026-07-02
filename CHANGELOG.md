@@ -3,6 +3,16 @@
 All notable changes to **Claude Session Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.1] — 2026-07-02
+
+### Fixed
+- View title actions (Search / New Group / Refresh) and the right-click context
+  menu now appear on the Session Tabs view (menus were gated on a stale view id).
+
+### Changed
+- Professional README with screenshots, a hover-preview image, and badges.
+- Slimmer published package (dev docs, CI, tests, and screenshots excluded).
+
 ## [0.1.0] — 2026-07-02
 
 Initial release.

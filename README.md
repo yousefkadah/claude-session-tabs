@@ -1,97 +1,100 @@
+<div align="center">
+
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/resources/icon.png" width="96" alt="Claude Session Tabs" />
+
 # Claude Session Tabs
 
-Chrome-style tab management for the **Claude Code** VS Code extension: named + colored **groups**, a searchable session list, pinning, and a **rich hover preview** showing each session's last messages, git branch, token usage, and activity — the stuff Chrome gives you on tab hover, brought to your Claude Code conversations.
+**Chrome-style tab management for the [Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) VS Code extension** — named + colored **groups**, a searchable session list, **pinning**, and a **rich hover preview** for every conversation.
 
-> **Why a sidebar and not the real tab bar?**
-> VS Code's extension API is deliberately limited here: the editor tab hover has **no** customization API (stable or proposed), the tab API is **read-only except `close()`**, and there's **no** way to color or group individual webview tabs. The only extensions that paint the tab bar do it by patching VS Code's files on disk, which breaks on every update and triggers a "corrupt installation" warning. So this extension mirrors your Claude tabs into a proper sidebar where all of these features *are* supported APIs. See [DESIGN.md](DESIGN.md) for the full API analysis.
+[![VS Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/yousefkadah.claude-session-tabs?color=1f8ceb&label=Marketplace&logo=visualstudiocode)](https://marketplace.visualstudio.com/items?itemName=yousefkadah.claude-session-tabs)
+[![Installs](https://img.shields.io/visual-studio-marketplace/i/yousefkadah.claude-session-tabs?color=1f8ceb)](https://marketplace.visualstudio.com/items?itemName=yousefkadah.claude-session-tabs)
+[![Rating](https://img.shields.io/visual-studio-marketplace/r/yousefkadah.claude-session-tabs?color=1f8ceb)](https://marketplace.visualstudio.com/items?itemName=yousefkadah.claude-session-tabs)
+[![CI](https://github.com/yousefkadah/claude-session-tabs/actions/workflows/ci.yml/badge.svg)](https://github.com/yousefkadah/claude-session-tabs/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## Demo
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/media/screenshots/sidebar.png" width="460" alt="Grouped Claude sessions with status dots" />
 
-<p align="center">
-  <img src="resources/icon.png" width="96" alt="Claude Session Tabs" /><br/>
-  <em>Demo GIF coming soon — record the Sessions sidebar + the bottom strip, save it as <code>media/demo.gif</code>, then uncomment the line below.</em>
-</p>
+</div>
 
-<!-- ![Claude Session Tabs — grouped sessions, rich hovers, and the horizontal strip](media/demo.gif) -->
+---
 
-## Features
+> **Why a sidebar, not the real tab bar?**
+> VS Code's extension API deliberately can't customize editor‑tab hovers, can't color or group individual webview tabs, and exposes tabs as read‑only (except close). The only extensions that paint the tab bar do it by patching VS Code's files on disk — which breaks on every update. So this extension mirrors your Claude conversations into a proper view where all of these features are *supported* APIs. Full analysis in [DESIGN.md](DESIGN.md).
 
-- **Live tab mirror** — every open Claude Code conversation, updated as you switch/open/close tabs.
-- **Groups** — create named, colored groups; drag sessions between them; collapse/expand; state persists per workspace.
-- **Rich hover** — a Markdown tooltip with the last user + Claude message, git branch, context-token count, message count, and "N min ago".
-- **Status at a glance** — colored dots for active (green) / working (orange) / open (blue) / closed (outline).
-- **Pin** important sessions to the top.
-- **Search** (`Claude Tabs: Search Sessions…`) — fuzzy-find any session in this workspace by title or last prompt, then jump to it.
-- **Reopen closed sessions** — closed conversations remain listed and one click reopens them via the Claude Code extension.
+## ✨ Features
 
-## How it works
+- **🗂️ Groups** — create named, colored groups and drag sessions between them. They collapse and persist per workspace, just like Chrome tab groups.
+- **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
+- **🟢 Live status** — colored dots for **active** (green), **working** (orange), **open** (blue), and **closed** (outline), matched to your live editor tabs.
+- **📌 Pinning** — keep the sessions you return to at the top.
+- **🔎 Search** — fuzzy‑find any conversation in the workspace by title or last prompt, then jump to it.
+- **↔️ Two surfaces, one data source** — a tree inside the Claude Code sidebar **and** a horizontal Chrome‑style strip in the bottom panel, always in sync.
+- **🔒 Local only** — everything is read from your local `~/.claude` transcripts; nothing is sent anywhere.
 
-- Detects Claude tabs via the Tab API: `TabInputWebview` with viewType `claudeVSCodePanel`.
-- Reads session content from `~/.claude/projects/<workspace-slug>/*.jsonl` (subagent/sidechain transcripts excluded), cached by file mtime so unchanged sessions are never re-parsed.
-- Opens/reveals a session with the Claude Code command `claude-vscode.editor.open` (falls back to the `vscode://anthropic.claude-code/open?session=…` URI).
+## 📸 Screenshots
 
-Nothing is sent anywhere; all reads are local.
+### Grouped sessions in the Claude Code sidebar
+Colored groups, live status dots, and per‑workspace organization — nested right inside Claude Code's own sidebar.
 
-## Develop / run it
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/media/screenshots/sidebar.png" width="520" alt="Session Tabs tree with a colored group" />
 
-```bash
-npm install
-npm run compile      # or: npm run watch
-```
+### Rich hover preview
+Hover any session for an at‑a‑glance card of the conversation.
 
-Then press **F5** ("Run Extension") to launch an Extension Development Host. Open the **Claude Code** sidebar — the **Session Tabs** view appears there (and the horizontal **Claude Tabs** strip is in the bottom panel). Start or open a Claude Code conversation and it shows up in the list.
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/media/screenshots/hover.png" width="560" alt="Hover preview card" />
 
-Type-check without building: `npm run typecheck`.
+### Horizontal tab strip (bottom panel)
+Prefer a browser‑like strip? The **Claude Tabs** panel gives grouped tab chips with the same previews and drag‑to‑group.
 
-Package a `.vsix`: `npx @vscode/vsce package --no-dependencies` (after `npm install`).
-Regenerate the marketplace icon: `node scripts/gen-icon.js`.
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/media/screenshots/strip.png" width="620" alt="Horizontal session strip" />
 
-## Project structure
+## 🚀 Install
 
-The code is organized in layers — model → data → view → wiring — so each file has
-one responsibility and no upward dependencies:
+1. Open **Extensions** in VS Code (`⇧⌘X` / `Ctrl+Shift+X`) and search **“Claude Session Tabs”**, or run:
+   ```
+   ext install yousefkadah.claude-session-tabs
+   ```
+2. Make sure the **[Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code)** extension is installed and you've opened at least one conversation.
+3. Open the **Claude Code** sidebar → the **Session Tabs** view. For the horizontal strip, open the bottom panel (`⌘J` / `Ctrl+J`) → **Claude Tabs**.
 
-```
-src/
-  extension.ts            Activation & wiring only (thin entry point)
-  commands.ts             Command registration + webview-strip message handlers
-  model/
-    types.ts              Shared domain types & webview DTOs
-  data/
-    transcript.ts         Pure .jsonl parsing (no VS Code imports)
-    sessionStore.ts       Transcript discovery, file I/O, mtime cache
-    groupStore.ts         Persisted groups / pins / assignments
-  view/
-    sessionTree.ts        TreeDataProvider + drag-and-drop + rich hovers
-    strip/
-      stripView.ts        WebviewViewProvider (bottom-panel strip)
-      stripHtml.ts        Pure HTML/CSS/JS template for the strip
-  util/
-    format.ts             truncate / token & time formatting / markdown escaping
-    async.ts              debounce
-scripts/
-  gen-icon.js             Dependency-free PNG icon generator
-```
+**Requirements:** VS Code `^1.84.0` (or a compatible fork) and the Anthropic **Claude Code** extension.
 
-`data/` never imports `view/`; `view/` and `commands.ts` depend on `data/` and
-`model/`; `extension.ts` wires them together. `transcript.ts`, `stripHtml.ts`, and
-everything in `util/` are pure (no `vscode` import) and unit-testable in isolation.
+## 🧭 Where it lives
 
-## Settings
+- **Session Tabs** — a tree inside the **Claude Code** sidebar (appears while Claude Code is active).
+- **Claude Tabs** — a horizontal strip in the bottom **panel** (`⌘J` / `Ctrl+J`).
+
+Right‑click any session or group for actions (pin, move to group, rename/recolor/delete group); use the view's title bar for **Search**, **New Group**, and **Refresh**.
+
+## ⚙️ How it works
+
+- Detects Claude tabs via the Tab API (`TabInputWebview` with the `claudeVSCodePanel` view type).
+- Reads session content from `~/.claude/projects/<workspace>/*.jsonl` (subagent transcripts excluded), cached by file mtime so unchanged sessions are never re‑parsed.
+- Opens/reveals a session with the Claude Code command `claude-vscode.editor.open`.
+
+## 🔧 Settings
 
 | Setting | Default | Description |
 | --- | --- | --- |
 | `claudeSessionTabs.maxRecentSessions` | `25` | Max recent (closed) sessions shown under Ungrouped. Open/pinned/grouped always show. |
 | `claudeSessionTabs.showClosedSessions` | `true` | Include recently closed sessions, not just open tabs. |
-| `claudeSessionTabs.projectDirectory` | `""` | Override the `~/.claude/projects/<slug>` directory. Empty = auto-detect. |
+| `claudeSessionTabs.projectDirectory` | `""` | Override the `~/.claude/projects/<slug>` directory. Empty = auto‑detect. |
 
-## Requirements
+## ⚠️ Known limitations
 
-- VS Code (or a compatible fork) `^1.84.0`.
-- The Anthropic **Claude Code** extension installed and used at least once (to create transcripts).
+- The views live in the sidebar and bottom panel — VS Code's API can't render them on the native editor tab bar.
+- A live tab's exact `sessionId` isn't exposed by the Tab API, so sessions are matched to tabs by title (with file mtime as a tiebreaker). Two sessions with identical 24‑char‑truncated titles can rarely be matched in the wrong order until one updates.
+- The sidebar view rides Claude Code's container; if a future Claude Code update renames it, the view may need a one‑line update.
 
-## Known limitations (from the VS Code API)
+## 🛠️ Development
 
-- The mirror lives in a sidebar; it can't render on the native editor tab bar.
-- Clicking an already-open session **reveals** it via the Claude Code command; there is no general API to focus an arbitrary tab.
-- A live tab's exact `sessionId` isn't exposed by the Tab API, so sessions are matched to tabs by title (with file mtime as a tiebreaker). Rarely, two sessions with identical 24-char-truncated titles can be matched in the wrong order until one updates.
+```bash
+npm install
+npm run watch      # or: npm run compile
+npm test           # headless data-layer tests
+```
+Press **F5** to launch an Extension Development Host. Package a `.vsix` with `npx @vscode/vsce package --no-dependencies`. The code is organized in layers (`model → data → view → wiring`); the full VS Code API analysis is in [DESIGN.md](DESIGN.md).
+
+## 📄 License
+
+[MIT](LICENSE) © yousefkadah

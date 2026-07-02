@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Session Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -270,31 +270,41 @@
             "id": "openSessions",
             "title": "Open the Sessions view",
             "description": "Open the __Claude Code__ sidebar — the __Session Tabs__ view lists every conversation in this workspace, grouped and color-coded.\n[Open Session Tabs](command:claudeSessionTabsInline.focus)",
-            "media": { "markdown": "media/walkthrough-sessions.md" }
+            "media": {
+              "markdown": "media/walkthrough-sessions.md"
+            }
           },
           {
             "id": "hover",
             "title": "Preview on hover",
             "description": "Hover any session to see a rich preview: the last messages, git branch, context-token count, and how long ago it was active — the Chrome-tab-hover experience for your chats.",
-            "media": { "markdown": "media/walkthrough-hover.md" }
+            "media": {
+              "markdown": "media/walkthrough-hover.md"
+            }
           },
           {
             "id": "groups",
             "title": "Create colored groups",
             "description": "Make a named, colored group, then drag sessions into it. Groups collapse and persist per workspace.\n[New Group](command:claudeSessionTabs.newGroup)",
-            "media": { "markdown": "media/walkthrough-groups.md" }
+            "media": {
+              "markdown": "media/walkthrough-groups.md"
+            }
           },
           {
             "id": "strip",
             "title": "Open the horizontal strip",
             "description": "Prefer a browser-like horizontal tab strip? Open the __Claude Tabs__ panel at the bottom for grouped tab chips with the same hover preview.\n[Open Strip](command:workbench.view.extension.claudeSessionTabsStrip)",
-            "media": { "markdown": "media/walkthrough-strip.md" }
+            "media": {
+              "markdown": "media/walkthrough-strip.md"
+            }
           },
           {
             "id": "search",
             "title": "Search and pin",
             "description": "Fuzzy-find any conversation by title or last prompt, and pin the ones you keep coming back to.\n[Search Sessions](command:claudeSessionTabs.search)",
-            "media": { "markdown": "media/walkthrough-search.md" }
+            "media": {
+              "markdown": "media/walkthrough-search.md"
+            }
           }
         ]
       }
