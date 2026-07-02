@@ -88,43 +88,63 @@ export class SessionTreeProvider
   private entries: SessionEntry[] = [];
   private maxRecent = 25;
   private showClosed = true;
-  /** When the user starts a new session from a group, the next fresh session joins it. */
-  private pendingGroup?: { groupId: string; since: number };
-  /** Real session ids seen in the previous build — used to detect a freshly-created one. */
-  private seenIds = new Set<string>();
+  /**
+   * When the user starts a new session from a group, we latch onto the new tab
+   * (its Tab object is stable even while the session has no id yet), show it in
+   * the group immediately, and persist the assignment once the session gets a
+   * real id. `tab` is set once we've identified the freshly-opened tab.
+   */
+  private pendingGroup?: { groupId: string; since: number; tab?: vscode.Tab; before: Set<vscode.Tab> };
 
   constructor(private store: SessionStore, private groups: GroupStore) {}
 
-  /** Queue the next newly-created session to be added to this group (expires in 90s). */
+  /** Queue a new session (opened right after this) to be added to `groupId`. */
   setPendingGroup(groupId: string): void {
-    this.pendingGroup = { groupId, since: Date.now() };
+    const before = new Set<vscode.Tab>();
+    for (const lt of this.liveTabs()) {
+      before.add(lt.tab);
+    }
+    this.pendingGroup = { groupId, since: Date.now(), before };
   }
 
-  private resolvePendingGroup(): void {
+  /**
+   * Resolve the pending "new session in group" request. Returns the tab we've
+   * latched onto (so build() can show it in the group before its id stabilizes).
+   */
+  private resolvePendingGroup(): vscode.Tab | undefined {
     const p = this.pendingGroup;
     if (!p) {
-      return;
+      return undefined;
     }
     if (Date.now() - p.since > 120_000 || !this.groups.hasGroup(p.groupId)) {
       this.pendingGroup = undefined;
-      return;
+      return undefined;
     }
-    // The just-created session: a transcript-backed session we hadn't seen before,
-    // whose file changed after the click, and that isn't grouped yet. We do NOT
-    // require it to be matched to a tab (open) — matching can lag by a build, and
-    // requiring it caused the session to be marked "seen" before it could be caught.
-    const candidates = this.entries.filter(
-      (e) =>
-        e.meta.filePath &&
-        !this.seenIds.has(e.meta.id) &&
-        !this.groups.groupOf(e.meta.id) &&
-        e.meta.mtimeMs >= p.since - 15_000,
-    );
-    const fresh = candidates.find((e) => e.live?.isActive) ?? candidates[0];
-    if (fresh) {
+    // Latch onto the freshly-opened tab: a Claude tab that wasn't open before the
+    // click (prefer the active one). Its Tab object stays identical across builds.
+    if (!p.tab) {
+      const fresh = this.entries.filter((e) => e.live && !p.before.has(e.live.tab));
+      const chosen = fresh.find((e) => e.live?.isActive) ?? fresh[0];
+      if (chosen?.live) {
+        p.tab = chosen.live.tab;
+      }
+    }
+    if (!p.tab) {
+      return undefined; // new tab hasn't appeared yet
+    }
+    // Once that tab's session has a real id, persist the group assignment.
+    const entry = this.entries.find((e) => e.live?.tab === p.tab);
+    if (!entry) {
+      this.pendingGroup = undefined; // tab was closed
+      return undefined;
+    }
+    if (entry.meta.filePath && !this.groups.groupOf(entry.meta.id)) {
+      const groupId = p.groupId;
       this.pendingGroup = undefined;
-      void this.groups.assign(fresh.meta.id, p.groupId);
+      void this.groups.assign(entry.meta.id, groupId);
+      return undefined;
     }
+    return p.tab; // still id-less — keep showing it in the group visually
   }
 
   dispose(): void {
@@ -203,8 +223,14 @@ export class SessionTreeProvider
       return b.meta.mtimeMs - a.meta.mtimeMs;
     });
     this.entries = entries;
-    this.resolvePendingGroup(); // uses seenIds from the previous build
-    this.seenIds = new Set(entries.filter((e) => e.meta.filePath).map((e) => e.meta.id));
+    const pendingTab = this.resolvePendingGroup();
+    if (pendingTab && this.pendingGroup) {
+      // Show the freshly-opened session inside its group before it has a real id.
+      const e = this.entries.find((x) => x.live?.tab === pendingTab);
+      if (e) {
+        e.groupId = this.pendingGroup.groupId;
+      }
+    }
     this._onDidBuild.fire();
   }
 

@@ -3,6 +3,14 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.10] — 2026-07-03
+
+### Fixed
+- **Start New Session in a group** now works reliably. Instead of guessing the new
+  session by id/time (which raced with transcript creation), it latches onto the
+  new tab's stable object, shows it in the group immediately, and persists the
+  assignment once the session gets a real id.
+
 ## [0.1.9] — 2026-07-03
 
 ### Fixed
