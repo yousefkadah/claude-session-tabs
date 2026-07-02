@@ -1,8 +1,8 @@
 {
   "name": "claude-session-tabs",
-  "displayName": "Claude Session Tabs",
+  "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -240,7 +240,7 @@
       ]
     },
     "configuration": {
-      "title": "Claude Session Tabs",
+      "title": "Claude Code Tabs",
       "properties": {
         "claudeSessionTabs.maxRecentSessions": {
           "type": "number",
@@ -263,7 +263,7 @@
     "walkthroughs": [
       {
         "id": "claudeSessionTabs.gettingStarted",
-        "title": "Get started with Claude Session Tabs",
+        "title": "Get started with Claude Code Tabs",
         "description": "Group, preview, and switch your Claude Code conversations like browser tabs.",
         "steps": [
           {

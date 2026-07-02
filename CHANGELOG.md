@@ -1,7 +1,12 @@
 # Changelog
 
-All notable changes to **Claude Session Tabs** are documented here.
+All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
+
+## [0.1.2] — 2026-07-02
+
+### Changed
+- Renamed the extension to **Claude Code Tabs** (display name).
 
 ## [0.1.1] — 2026-07-02
 

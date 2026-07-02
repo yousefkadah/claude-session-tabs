@@ -1,8 +1,8 @@
 <div align="center">
 
-<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/resources/icon.png" width="96" alt="Claude Session Tabs" />
+<img src="https://raw.githubusercontent.com/yousefkadah/claude-session-tabs/main/resources/icon.png" width="96" alt="Claude Code Tabs" />
 
-# Claude Session Tabs
+# Claude Code Tabs
 
 **Chrome-style tab management for the [Claude Code](https://marketplace.visualstudio.com/items?itemName=anthropic.claude-code) VS Code extension** — named + colored **groups**, a searchable session list, **pinning**, and a **rich hover preview** for every conversation.
 
@@ -50,7 +50,7 @@ Prefer a browser‑like strip? The **Claude Tabs** panel gives grouped tab chips
 
 ## 🚀 Install
 
-1. Open **Extensions** in VS Code (`⇧⌘X` / `Ctrl+Shift+X`) and search **“Claude Session Tabs”**, or run:
+1. Open **Extensions** in VS Code (`⇧⌘X` / `Ctrl+Shift+X`) and search **“Claude Code Tabs”**, or run:
    ```
    ext install yousefkadah.claude-session-tabs
    ```
