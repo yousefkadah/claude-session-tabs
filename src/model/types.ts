@@ -44,6 +44,8 @@ export interface SessionEntry {
   open: boolean;
   live?: LiveTab;
   pinned: boolean;
+  /** User-marked "needs my attention" flag. */
+  flagged: boolean;
   groupId: string | null;
 }
 
@@ -62,6 +64,8 @@ export interface PersistedState {
   /** sessionId -> groupId */
   assignments: Record<string, string>;
   pinned: string[];
+  /** session ids the user flagged as needing attention */
+  flagged: string[];
   version: number;
 }
 
@@ -75,6 +79,7 @@ export interface StripSession {
   short: string;
   open: boolean;
   pinned: boolean;
+  flagged: boolean;
   hasFile: boolean;
   status: SessionStatus;
   branch?: string;

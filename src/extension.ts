@@ -60,6 +60,10 @@ export function activate(context: vscode.ExtensionContext): void {
     try {
       await provider.build();
       provider.refresh();
+      const n = provider.getFlaggedCount();
+      const badge = n > 0 ? { value: n, tooltip: `${n} flagged session${n === 1 ? '' : 's'}` } : undefined;
+      primaryView.badge = badge;
+      inlineView.badge = badge;
     } finally {
       building = false;
       if (pending) {

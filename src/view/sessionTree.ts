@@ -35,18 +35,21 @@ function statusOf(e: SessionEntry): SessionStatus {
   return 'open';
 }
 
-/** Sort priority: pinned, then the active tab, then open, then closed. */
+/** Sort priority: pinned, then flagged, then the active tab, then open, then closed. */
 function rank(e: SessionEntry): number {
   if (e.pinned) {
     return 0;
   }
+  if (e.flagged) {
+    return 1;
+  }
   switch (statusOf(e)) {
     case 'active':
-      return 1;
-    case 'closed':
-      return 3;
-    default:
       return 2;
+    case 'closed':
+      return 4;
+    default:
+      return 3;
   }
 }
 
@@ -154,6 +157,7 @@ export class SessionTreeProvider
         open: !!match,
         live: match,
         pinned: this.groups.isPinned(meta.id),
+        flagged: this.groups.isFlagged(meta.id),
         groupId: this.groups.groupOf(meta.id),
       });
     }
@@ -179,6 +183,7 @@ export class SessionTreeProvider
         open: true,
         live: lt,
         pinned: this.groups.isPinned(id),
+        flagged: this.groups.isFlagged(id),
         groupId: this.groups.groupOf(id),
       });
     }
@@ -308,6 +313,7 @@ export class SessionTreeProvider
       short: truncate(m.title || 'Claude Code', 24),
       open: e.open,
       pinned: e.pinned,
+      flagged: e.flagged,
       hasFile: !!m.filePath,
       status: statusOf(e),
       branch: m.gitBranch && m.gitBranch !== 'HEAD' ? m.gitBranch : undefined,
@@ -351,6 +357,9 @@ export class SessionTreeProvider
 
   private sessionDescription(e: SessionEntry): string {
     const parts: string[] = [];
+    if (e.flagged) {
+      parts.push('🔔');
+    }
     if (e.pinned) {
       parts.push('📌');
     }
@@ -365,6 +374,9 @@ export class SessionTreeProvider
   }
 
   private sessionIcon(e: SessionEntry): vscode.ThemeIcon {
+    if (e.flagged) {
+      return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
+    }
     switch (statusOf(e)) {
       case 'active':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
@@ -375,10 +387,16 @@ export class SessionTreeProvider
     }
   }
 
+  /** Number of sessions the user flagged for attention — drives the view badge. */
+  getFlaggedCount(): number {
+    return this.entries.filter((e) => e.flagged).length;
+  }
+
   private sessionContext(e: SessionEntry): string {
     const flags = ['session'];
     flags.push(e.open ? 'open' : 'closed');
     flags.push(e.pinned ? 'pinned' : 'unpinned');
+    flags.push(e.flagged ? 'flagged' : 'unflagged');
     flags.push(e.groupId ? 'grouped' : 'ungrouped');
     return flags.join(' ');
   }
@@ -395,6 +413,9 @@ export class SessionTreeProvider
       closed: '$(circle-outline) Closed',
     };
     md.appendMarkdown(STATUS_LABEL[statusOf(e)]);
+    if (e.flagged) {
+      md.appendMarkdown('  ·  $(bell-dot) Flagged');
+    }
     if (e.pinned) {
       md.appendMarkdown('  ·  $(pinned) Pinned');
     }

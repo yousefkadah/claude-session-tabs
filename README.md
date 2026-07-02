@@ -24,6 +24,7 @@
 ## ✨ Features
 
 - **🗂️ Groups** — create named, colored groups and drag sessions between them, or **start a new session straight into a group** with the group's `+` button. They collapse and persist per workspace, just like Chrome tab groups.
+- **🔔 Flag for attention** — mark any session as needing you; it gets a bell, floats to the top, and shows a **count badge** on the icon (a reliable, you‑controlled alternative — Claude's own needs‑action state isn't exposed to extensions).
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
 - **🟢 Live status** — colored dots for **active** (green), **open** (blue), and **closed** (outline), matched to your live editor tabs.
 - **📌 Pinning** — keep the sessions you return to at the top.

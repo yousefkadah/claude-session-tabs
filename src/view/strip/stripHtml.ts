@@ -67,6 +67,10 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
   }
   .tab:hover { border-color: var(--vscode-focusBorder); }
   .tab.active { border-color: var(--vscode-focusBorder); background: var(--vscode-list-activeSelectionBackground); }
+  .tab.flagged {
+    border-color: var(--vscode-charts-yellow);
+    background: color-mix(in srgb, var(--vscode-charts-yellow) 18%, var(--vscode-editor-background));
+  }
   .tab.closed { opacity: 0.6; }
   .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-charts-blue); flex: 0 0 auto; }
   .tab .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -157,7 +161,7 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   function makeTab(s) {
     const t = document.createElement('div');
-    t.className = 'tab ' + s.status + (s.status === 'active' ? ' active' : '');
+    t.className = 'tab ' + s.status + (s.status === 'active' ? ' active' : '') + (s.flagged ? ' flagged' : '');
     t.draggable = true;
     t.addEventListener('dragstart', (ev) => ev.dataTransfer.setData('text/plain', s.id));
     t.addEventListener('click', () => vscode.postMessage({ type: 'open', id: s.id }));
@@ -165,10 +169,16 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
     t.addEventListener('mousemove', (ev) => positionPop(ev));
     t.addEventListener('mouseleave', hidePop);
 
-    const dot = document.createElement('span');
-    dot.className = 'dot';
-    dot.style.background = DOT[s.status] || DOT.open;
-    t.appendChild(dot);
+    if (s.flagged) {
+      const bell = document.createElement('span');
+      bell.className = 'pin'; bell.textContent = '🔔';
+      t.appendChild(bell);
+    } else {
+      const dot = document.createElement('span');
+      dot.className = 'dot';
+      dot.style.background = DOT[s.status] || DOT.open;
+      t.appendChild(dot);
+    }
 
     if (s.pinned) {
       const pin = document.createElement('span');
@@ -182,6 +192,9 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
     const actions = document.createElement('span');
     actions.className = 'actions';
+    actions.appendChild(iconBtn('🔔', s.flagged ? 'Unflag' : 'Flag for attention', (ev) => {
+      ev.stopPropagation(); vscode.postMessage({ type: 'flag', id: s.id });
+    }));
     actions.appendChild(iconBtn(s.pinned ? '📍' : '📌', s.pinned ? 'Unpin' : 'Pin', (ev) => {
       ev.stopPropagation(); vscode.postMessage({ type: 'pin', id: s.id });
     }));

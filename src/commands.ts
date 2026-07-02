@@ -124,6 +124,12 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     }
   });
 
+  reg('claudeSessionTabs.toggleFlag', async (node?: TreeNode) => {
+    if (node?.kind === 'session') {
+      await groups.toggleFlag(node.entry.meta.id);
+    }
+  });
+
   reg('claudeSessionTabs.search', async () => {
     const metas = await store.list();
     type Item = vscode.QuickPickItem & { id: string };
@@ -174,6 +180,11 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
         case 'pin':
           if (msg.id) {
             void groups.togglePin(msg.id);
+          }
+          break;
+        case 'flag':
+          if (msg.id) {
+            void groups.toggleFlag(msg.id);
           }
           break;
         case 'move':

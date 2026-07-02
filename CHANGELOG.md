@@ -3,6 +3,14 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.8] — 2026-07-03
+
+### Added
+- **Flag for attention** — manually flag any session (bell inline action, right-click,
+  or the strip's 🔔 button). Flagged sessions get a bell icon, sort to the top, and
+  show a count badge on the view. A reliable, user-controlled replacement for the
+  removed auto "waiting" indicator (Claude's real needs-action state isn't exposed).
+
 ## [0.1.7] — 2026-07-03
 
 ### Added

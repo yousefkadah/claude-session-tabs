@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.7",
+  "version": "0.1.8",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -123,6 +123,12 @@
         "icon": "$(pin)"
       },
       {
+        "command": "claudeSessionTabs.toggleFlag",
+        "title": "Flag / Unflag for Attention",
+        "category": "Claude Code Tabs",
+        "icon": "$(bell)"
+      },
+      {
         "command": "claudeSessionTabs.assignToGroup",
         "title": "Move to Group…",
         "category": "Claude Code Tabs",
@@ -188,14 +194,19 @@
           "group": "0_new@1"
         },
         {
-          "command": "claudeSessionTabs.togglePin",
+          "command": "claudeSessionTabs.toggleFlag",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "inline@1"
         },
         {
+          "command": "claudeSessionTabs.togglePin",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
+          "group": "inline@2"
+        },
+        {
           "command": "claudeSessionTabs.closeTab",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /open/",
-          "group": "inline@2"
+          "group": "inline@3"
         },
         {
           "command": "claudeSessionTabs.openSession",
@@ -213,9 +224,14 @@
           "group": "2_group@2"
         },
         {
-          "command": "claudeSessionTabs.togglePin",
+          "command": "claudeSessionTabs.toggleFlag",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
           "group": "2_group@3"
+        },
+        {
+          "command": "claudeSessionTabs.togglePin",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /session/",
+          "group": "2_group@4"
         },
         {
           "command": "claudeSessionTabs.closeTab",
@@ -253,6 +269,10 @@
         },
         {
           "command": "claudeSessionTabs.togglePin",
+          "when": "false"
+        },
+        {
+          "command": "claudeSessionTabs.toggleFlag",
           "when": "false"
         },
         {
