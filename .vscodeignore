@@ -8,6 +8,7 @@ esbuild.js
 tsconfig.json
 DESIGN.md
 PUBLISHING.md
+docs/**
 dist/smoke.cjs
 media/screenshots/**
 **/*.map
