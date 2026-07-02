@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
-import { GroupTreeNode, SessionTreeProvider } from './view/sessionTree';
+import { GroupTreeNode, SessionTreeProvider, TreeNode } from './view/sessionTree';
 import { StripViewProvider } from './view/strip/stripView';
 import { ExtensionServices, createStripHandlers, registerCommands } from './commands';
 import { debounce } from './util/async';
@@ -16,13 +16,32 @@ export function activate(context: vscode.ExtensionContext): void {
   const provider = new SessionTreeProvider(store, groups);
   provider.configure(cfg().get('maxRecentSessions', 25), cfg().get('showClosedSessions', true));
 
-  const view = vscode.window.createTreeView('claudeSessionTabs', {
+  const treeOptions: vscode.TreeViewOptions<TreeNode> = {
     treeDataProvider: provider,
     dragAndDropController: provider,
     showCollapseAll: true,
     canSelectMany: true,
-  });
-  context.subscriptions.push(view, provider, groups);
+  };
+  // Our own container, plus a mirror inside the Claude Code sidebar (when present).
+  const view = vscode.window.createTreeView('claudeSessionTabs', treeOptions);
+  const inlineView = vscode.window.createTreeView('claudeSessionTabsInline', treeOptions);
+  context.subscriptions.push(view, inlineView, provider, groups);
+
+  // Persist group collapse/expand from either tree view.
+  for (const v of [view, inlineView]) {
+    context.subscriptions.push(
+      v.onDidCollapseElement((e) => {
+        if (e.element instanceof GroupTreeNode && e.element.group) {
+          void groups.setCollapsed(e.element.group.id, true);
+        }
+      }),
+      v.onDidExpandElement((e) => {
+        if (e.element instanceof GroupTreeNode && e.element.group) {
+          void groups.setCollapsed(e.element.group.id, false);
+        }
+      }),
+    );
+  }
 
   // Tracks deactivation so async setup (below) doesn't register after teardown.
   let disposed = false;
@@ -55,16 +74,6 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.tabGroups.onDidChangeTabs(debouncedRebuild),
     vscode.window.tabGroups.onDidChangeTabGroups(debouncedRebuild),
     groups.onDidChange(() => void rebuild()),
-    view.onDidCollapseElement((e) => {
-      if (e.element instanceof GroupTreeNode && e.element.group) {
-        void groups.setCollapsed(e.element.group.id, true);
-      }
-    }),
-    view.onDidExpandElement((e) => {
-      if (e.element instanceof GroupTreeNode && e.element.group) {
-        void groups.setCollapsed(e.element.group.id, false);
-      }
-    }),
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (e.affectsConfiguration('claudeSessionTabs')) {
         provider.configure(cfg().get('maxRecentSessions', 25), cfg().get('showClosedSessions', true));

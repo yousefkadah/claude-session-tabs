@@ -67,6 +67,13 @@
           "type": "webview",
           "name": "Session Strip"
         }
+      ],
+      "claude-sessions-sidebar": [
+        {
+          "id": "claudeSessionTabsInline",
+          "name": "Session Tabs",
+          "when": "claude-vscode.sessionsListEnabled"
+        }
       ]
     },
     "viewsWelcome": [
