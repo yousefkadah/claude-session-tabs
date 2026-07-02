@@ -41,7 +41,7 @@
       "panel": [
         {
           "id": "claudeSessionTabsStrip",
-          "title": "Claude Tabs",
+          "title": "Claude Code Tabs",
           "icon": "resources/claude-tabs.svg"
         }
       ]
@@ -72,65 +72,65 @@
       {
         "command": "claudeSessionTabs.refresh",
         "title": "Refresh",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(refresh)"
       },
       {
         "command": "claudeSessionTabs.search",
         "title": "Search Sessions…",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(search)"
       },
       {
         "command": "claudeSessionTabs.newGroup",
         "title": "New Group…",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(new-folder)"
       },
       {
         "command": "claudeSessionTabs.openSession",
         "title": "Open Session",
-        "category": "Claude Tabs"
+        "category": "Claude Code Tabs"
       },
       {
         "command": "claudeSessionTabs.closeTab",
         "title": "Close Tab",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(close)"
       },
       {
         "command": "claudeSessionTabs.togglePin",
         "title": "Pin / Unpin",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(pin)"
       },
       {
         "command": "claudeSessionTabs.assignToGroup",
         "title": "Move to Group…",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(folder)"
       },
       {
         "command": "claudeSessionTabs.removeFromGroup",
         "title": "Remove from Group",
-        "category": "Claude Tabs"
+        "category": "Claude Code Tabs"
       },
       {
         "command": "claudeSessionTabs.renameGroup",
         "title": "Rename Group…",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(edit)"
       },
       {
         "command": "claudeSessionTabs.recolorGroup",
         "title": "Change Color…",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(symbol-color)"
       },
       {
         "command": "claudeSessionTabs.deleteGroup",
         "title": "Delete Group",
-        "category": "Claude Tabs",
+        "category": "Claude Code Tabs",
         "icon": "$(trash)"
       }
     ],
@@ -293,7 +293,7 @@
           {
             "id": "strip",
             "title": "Open the horizontal strip",
-            "description": "Prefer a browser-like horizontal tab strip? Open the __Claude Tabs__ panel at the bottom for grouped tab chips with the same hover preview.\n[Open Strip](command:workbench.view.extension.claudeSessionTabsStrip)",
+            "description": "Prefer a browser-like horizontal tab strip? Open the __Claude Code Tabs__ panel at the bottom for grouped tab chips with the same hover preview.\n[Open Strip](command:workbench.view.extension.claudeSessionTabsStrip)",
             "media": {
               "markdown": "media/walkthrough-strip.md"
             }

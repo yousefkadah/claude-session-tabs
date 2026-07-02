@@ -6,7 +6,8 @@ This project adheres to [Semantic Versioning](https://semver.org/).
 ## [0.1.2] — 2026-07-02
 
 ### Changed
-- Renamed the extension to **Claude Code Tabs** (display name).
+- Renamed the extension to **Claude Code Tabs** — display name, panel title, and
+  command category are now consistent.
 
 ## [0.1.1] — 2026-07-02
 
