@@ -22,7 +22,11 @@ export function activate(context: vscode.ExtensionContext): void {
     showCollapseAll: true,
     canSelectMany: true,
   });
-  context.subscriptions.push(view);
+  context.subscriptions.push(view, provider, groups);
+
+  // Tracks deactivation so async setup (below) doesn't register after teardown.
+  let disposed = false;
+  context.subscriptions.push({ dispose: () => (disposed = true) });
 
   // Serialize rebuilds; coalesce bursts of tab events.
   let building = false;
@@ -71,12 +75,16 @@ export function activate(context: vscode.ExtensionContext): void {
 
   // Watch the transcript directory so hovers/state stay fresh as sessions progress.
   void store.resolveDir().then((dir) => {
-    if (!dir) {
+    if (!dir || disposed) {
       return;
     }
     const watcher = vscode.workspace.createFileSystemWatcher(
       new vscode.RelativePattern(vscode.Uri.file(dir), '*.jsonl'),
     );
+    if (disposed) {
+      watcher.dispose(); // extension was deactivated during dir resolution
+      return;
+    }
     const onFs = (uri: vscode.Uri): void => {
       store.invalidate(uri.fsPath);
       debouncedRebuild();
@@ -95,6 +103,7 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const strip = new StripViewProvider(context.extensionUri, provider, createStripHandlers(services));
   context.subscriptions.push(
+    strip,
     vscode.window.registerWebviewViewProvider(StripViewProvider.viewType, strip, {
       webviewOptions: { retainContextWhenHidden: true },
     }),

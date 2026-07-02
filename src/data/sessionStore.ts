@@ -2,7 +2,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
 import { SessionMeta } from '../model/types';
-import { parseSession, readFirstRecord } from './transcript';
+import { parseSession, readCwd } from './transcript';
 
 interface CacheEntry {
   mtimeMs: number;
@@ -46,8 +46,8 @@ export class SessionStore {
       return undefined;
     }
     const base = path.join(os.homedir(), '.claude', 'projects');
-    // Claude derives the slug by replacing path separators, whitespace and dots with '-'.
-    const slug = this.cwd.replace(/[/\\.\s:]/g, '-');
+    // Claude derives the slug by replacing every non-alphanumeric character with '-'.
+    const slug = this.cwd.replace(/[^A-Za-z0-9]/g, '-');
     const candidate = path.join(base, slug);
     try {
       await fs.access(candidate);
@@ -68,12 +68,16 @@ export class SessionStore {
         } catch {
           continue;
         }
-        if (!files.length) {
-          continue;
-        }
-        const first = await readFirstRecord(path.join(full, files[0]));
-        if (first && typeof first.cwd === 'string' && first.cwd === this.cwd) {
-          return full;
+        // Scan files until one yields a cwd; a directory belongs to exactly one cwd.
+        for (const file of files) {
+          const cwd = await readCwd(path.join(full, file));
+          if (cwd === undefined) {
+            continue;
+          }
+          if (cwd === this.cwd) {
+            return full;
+          }
+          break; // this directory is a different cwd — stop scanning it
         }
       }
     } catch {

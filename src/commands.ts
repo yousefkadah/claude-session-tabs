@@ -191,7 +191,8 @@ async function openById(sessionId: string): Promise<void> {
     await vscode.commands.executeCommand('claude-vscode.editor.open', sessionId);
   } catch {
     try {
-      await vscode.env.openExternal(vscode.Uri.parse(`vscode://anthropic.claude-code/open?session=${sessionId}`));
+      const uri = `vscode://anthropic.claude-code/open?session=${encodeURIComponent(sessionId)}`;
+      await vscode.env.openExternal(vscode.Uri.parse(uri));
     } catch {
       void vscode.window.showErrorMessage(
         'Could not open the session. Make sure the Claude Code extension is installed and enabled.',

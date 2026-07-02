@@ -2,7 +2,14 @@ import * as vscode from 'vscode';
 import { SessionStore } from '../data/sessionStore';
 import { GroupStore } from '../data/groupStore';
 import { GroupDef, LiveTab, SessionEntry, SessionStatus, StripData, StripSession } from '../model/types';
-import { claudeTruncateLabel, escapeMd, formatRelative, formatTokens, truncate } from '../util/format';
+import {
+  claudeTruncateLabel,
+  escapeMd,
+  formatRelative,
+  formatTokens,
+  normalizeLabel,
+  truncate,
+} from '../util/format';
 
 const DND_MIME = 'application/vnd.claude-session-tabs';
 const UNGROUPED_ID = '__ungrouped__';
@@ -43,7 +50,7 @@ export class SessionTreeNode {
 export type TreeNode = GroupTreeNode | SessionTreeNode;
 
 export class SessionTreeProvider
-  implements vscode.TreeDataProvider<TreeNode>, vscode.TreeDragAndDropController<TreeNode>
+  implements vscode.TreeDataProvider<TreeNode>, vscode.TreeDragAndDropController<TreeNode>, vscode.Disposable
 {
   private readonly _onDidChangeTreeData = new vscode.EventEmitter<TreeNode | undefined | void>();
   readonly onDidChangeTreeData = this._onDidChangeTreeData.event;
@@ -60,6 +67,11 @@ export class SessionTreeProvider
   private showClosed = true;
 
   constructor(private store: SessionStore, private groups: GroupStore) {}
+
+  dispose(): void {
+    this._onDidChangeTreeData.dispose();
+    this._onDidBuild.dispose();
+  }
 
   configure(maxRecent: number, showClosed: boolean): void {
     this.maxRecent = maxRecent;
@@ -81,7 +93,7 @@ export class SessionTreeProvider
       const label = claudeTruncateLabel(meta.title);
       let match: LiveTab | undefined;
       for (const lt of live) {
-        if (!used.has(lt) && lt.label === label) {
+        if (!used.has(lt) && normalizeLabel(lt.label) === label) {
           match = lt;
           break;
         }
@@ -158,14 +170,20 @@ export class SessionTreeProvider
     return out;
   }
 
+  /** An entry counts as grouped only if its assignment points to an existing group. */
+  private isGrouped(e: SessionEntry): boolean {
+    return !!e.groupId && this.groups.hasGroup(e.groupId);
+  }
+
   private visibleEntries(): SessionEntry[] {
     const vis: SessionEntry[] = [];
     let recent = 0;
     for (const e of this.entries) {
-      if (!e.open && e.meta.messageCount === 0) {
-        continue; // empty transcript that isn't currently open
+      const kept = e.open || e.pinned || this.isGrouped(e);
+      if (!kept && e.meta.messageCount === 0) {
+        continue; // empty transcript the user hasn't pinned/grouped and isn't viewing
       }
-      const isRecentOnly = !e.open && !e.pinned && e.groupId === null;
+      const isRecentOnly = !kept;
       if (isRecentOnly && (!this.showClosed || recent >= this.maxRecent)) {
         continue;
       }
@@ -183,12 +201,12 @@ export class SessionTreeProvider
     const byGroup = new Map<string, SessionEntry[]>();
     const ungrouped: SessionEntry[] = [];
     for (const e of vis) {
-      if (e.groupId && this.groups.hasGroup(e.groupId)) {
-        const list = byGroup.get(e.groupId);
+      if (this.isGrouped(e)) {
+        const list = byGroup.get(e.groupId as string);
         if (list) {
           list.push(e);
         } else {
-          byGroup.set(e.groupId, [e]);
+          byGroup.set(e.groupId as string, [e]);
         }
       } else {
         ungrouped.push(e);

@@ -4,8 +4,15 @@
  * (webview: title.length > 25 ? title.slice(0,24) + '…' : title, fallback "Claude Code")
  */
 export function claudeTruncateLabel(title: string): string {
-  const t = title && title.trim() ? title : 'Claude Code';
+  // Collapse whitespace so multi-line titles still match the single-line VS Code tab label.
+  const collapsed = title ? title.replace(/\s+/g, ' ').trim() : '';
+  const t = collapsed || 'Claude Code';
   return t.length > 25 ? t.substring(0, 24) + '…' : t;
+}
+
+/** Normalize a tab label for comparison (matches claudeTruncateLabel's whitespace handling). */
+export function normalizeLabel(label: string): string {
+  return label.replace(/\s+/g, ' ').trim();
 }
 
 /** Collapse whitespace and truncate for compact display. */

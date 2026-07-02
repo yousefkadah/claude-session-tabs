@@ -10,13 +10,17 @@ function genId(): string {
 }
 
 /** Persists user-defined groups, per-session group assignments, and pins in workspaceState. */
-export class GroupStore {
+export class GroupStore implements vscode.Disposable {
   private state: PersistedState;
   private readonly _onDidChange = new vscode.EventEmitter<void>();
   readonly onDidChange = this._onDidChange.event;
 
   constructor(private memento: vscode.Memento) {
     this.state = memento.get<PersistedState>(KEY) ?? { groups: [], assignments: {}, pinned: [], version: 1 };
+  }
+
+  dispose(): void {
+    this._onDidChange.dispose();
   }
 
   get groups(): GroupDef[] {

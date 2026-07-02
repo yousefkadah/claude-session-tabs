@@ -82,15 +82,33 @@ export async function parseSession(
   };
 }
 
-/** Read and parse just the first JSON line of a transcript (used for cwd matching). */
-export async function readFirstRecord(filePath: string): Promise<Record<string, unknown> | undefined> {
+/**
+ * Read the head of a transcript and return the first `cwd` found on any record.
+ * Transcripts commonly begin with queue-operation / ai-title / summary lines that
+ * carry no cwd, so scanning only the first line is unreliable.
+ */
+export async function readCwd(filePath: string): Promise<string | undefined> {
   let fh: fs.FileHandle | undefined;
   try {
     fh = await fs.open(filePath, 'r');
     const buf = Buffer.alloc(HEAD_BYTES);
     const { bytesRead } = await fh.read(buf, 0, HEAD_BYTES, 0);
-    const firstLine = buf.toString('utf8', 0, bytesRead).split('\n')[0];
-    return JSON.parse(firstLine);
+    const lines = buf.toString('utf8', 0, bytesRead).split('\n');
+    for (const line of lines) {
+      const s = line.trim();
+      if (!s) {
+        continue;
+      }
+      try {
+        const r = JSON.parse(s);
+        if (r && typeof r.cwd === 'string') {
+          return r.cwd;
+        }
+      } catch {
+        // Partial trailing line or non-JSON — keep scanning.
+      }
+    }
+    return undefined;
   } catch {
     return undefined;
   } finally {

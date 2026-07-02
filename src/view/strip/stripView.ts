@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import * as crypto from 'crypto';
 import { SessionTreeProvider } from '../sessionTree';
 import { renderStripHtml } from './stripHtml';
 
@@ -18,16 +19,21 @@ export interface StripHandlers {
  * preview card, close/pin buttons, and drag-to-group. It shares its data with the
  * sidebar tree via SessionTreeProvider.
  */
-export class StripViewProvider implements vscode.WebviewViewProvider {
+export class StripViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   static readonly viewType = 'claudeSessionTabsStripView';
   private view?: vscode.WebviewView;
+  private readonly buildSub: vscode.Disposable;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
     private readonly provider: SessionTreeProvider,
     private readonly handlers: StripHandlers,
   ) {
-    this.provider.onDidBuild(() => this.post());
+    this.buildSub = this.provider.onDidBuild(() => this.post());
+  }
+
+  dispose(): void {
+    this.buildSub.dispose();
   }
 
   resolveWebviewView(view: vscode.WebviewView): void {
@@ -35,7 +41,10 @@ export class StripViewProvider implements vscode.WebviewViewProvider {
     view.webview.options = { enableScripts: true, localResourceRoots: [this.extensionUri] };
     view.webview.html = renderStripHtml(view.webview.cspSource, makeNonce());
     view.webview.onDidReceiveMessage((msg: StripMessage) => {
-      if (msg?.type === 'ready') {
+      if (!msg || typeof msg !== 'object') {
+        return;
+      }
+      if (msg.type === 'ready') {
         this.post();
       } else {
         this.handlers.onMessage(msg);
@@ -56,10 +65,5 @@ export class StripViewProvider implements vscode.WebviewViewProvider {
 }
 
 function makeNonce(): string {
-  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  let out = '';
-  for (let i = 0; i < 32; i++) {
-    out += chars[Math.floor(Math.random() * chars.length)];
-  }
-  return out;
+  return crypto.randomBytes(24).toString('base64').replace(/[^A-Za-z0-9]/g, '');
 }
