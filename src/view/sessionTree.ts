@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from '../data/sessionStore';
 import { GroupStore } from '../data/groupStore';
-import { GroupDef, LiveTab, SessionEntry, SessionStatus, StripData, StripSession } from '../model/types';
+import { GroupDef, LiveTab, SessionEntry, SessionStatus, StripData, StripSession, SubagentInfo } from '../model/types';
 import {
   claudeTruncateLabel,
   escapeMd,
@@ -86,7 +86,12 @@ export class SessionTreeNode {
   constructor(public entry: SessionEntry) {}
 }
 
-export type TreeNode = GroupTreeNode | SessionTreeNode;
+export class SubagentTreeNode {
+  readonly kind = 'subagent' as const;
+  constructor(public sub: SubagentInfo, public sessionId: string) {}
+}
+
+export type TreeNode = GroupTreeNode | SessionTreeNode | SubagentTreeNode;
 
 export class SessionTreeProvider
   implements vscode.TreeDataProvider<TreeNode>, vscode.TreeDragAndDropController<TreeNode>, vscode.Disposable
@@ -207,6 +212,7 @@ export class SessionTreeProvider
         live: match,
         pinned: this.groups.isPinned(meta.id),
         groupId: this.groups.groupOf(meta.id),
+        subagents: await this.store.getSubagents(meta.id),
       });
     }
 
@@ -235,6 +241,7 @@ export class SessionTreeProvider
         live: lt,
         pinned: this.groups.isPinned(id),
         groupId: this.groups.groupOf(id),
+        subagents: [],
       });
     }
 
@@ -340,6 +347,9 @@ export class SessionTreeProvider
     if (element.kind === 'group') {
       return element.entries.map((e) => new SessionTreeNode(e));
     }
+    if (element.kind === 'session') {
+      return element.entry.subagents.map((s) => new SubagentTreeNode(s, element.entry.meta.id));
+    }
     return [];
   }
 
@@ -358,7 +368,35 @@ export class SessionTreeProvider
   }
 
   getTreeItem(node: TreeNode): vscode.TreeItem {
-    return node.kind === 'group' ? this.groupItem(node) : this.sessionItem(node);
+    if (node.kind === 'group') {
+      return this.groupItem(node);
+    }
+    if (node.kind === 'subagent') {
+      return this.subagentItem(node);
+    }
+    return this.sessionItem(node);
+  }
+
+  private subagentItem(node: SubagentTreeNode): vscode.TreeItem {
+    const s = node.sub;
+    const running = Date.now() - s.mtimeMs < WORKING_MS;
+    const label = s.description || s.agentType;
+    const item = new vscode.TreeItem(label, vscode.TreeItemCollapsibleState.None);
+    item.id = 'sub:' + node.sessionId + ':' + s.agentId;
+    item.description = s.agentType + (running ? '' : ' · ' + formatRelative(s.mtimeMs));
+    item.iconPath = running
+      ? new vscode.ThemeIcon('sync', new vscode.ThemeColor('charts.blue'))
+      : new vscode.ThemeIcon('robot');
+    item.contextValue = 'subagent';
+    const md = new vscode.MarkdownString();
+    md.supportThemeIcons = true;
+    md.appendMarkdown(`$(robot) **${escapeMd(s.agentType)}**${running ? '  ·  $(sync) running' : ''}\n\n`);
+    if (s.description) {
+      md.appendMarkdown(`${escapeMd(s.description)}\n\n`);
+    }
+    md.appendMarkdown(`$(history) ${formatRelative(s.mtimeMs)}`);
+    item.tooltip = md;
+    return item;
   }
 
   private sessionSnapshot(e: SessionEntry): StripSession {
@@ -398,7 +436,10 @@ export class SessionTreeProvider
 
   private sessionItem(node: SessionTreeNode): vscode.TreeItem {
     const e = node.entry;
-    const item = new vscode.TreeItem(e.meta.title || 'Claude Code', vscode.TreeItemCollapsibleState.None);
+    const collapsible = e.subagents.length
+      ? vscode.TreeItemCollapsibleState.Collapsed
+      : vscode.TreeItemCollapsibleState.None;
+    const item = new vscode.TreeItem(e.meta.title || 'Claude Code', collapsible);
     item.id = 'session:' + e.meta.id;
     item.description = this.sessionDescription(e);
     item.tooltip = this.buildTooltip(e);

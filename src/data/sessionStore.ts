@@ -1,7 +1,7 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import * as os from 'os';
-import { SessionMeta } from '../model/types';
+import { SessionMeta, SubagentInfo } from '../model/types';
 import { parseSession, readCwd } from './transcript';
 
 interface CacheEntry {
@@ -16,6 +16,7 @@ interface CacheEntry {
  */
 export class SessionStore {
   private cache = new Map<string, CacheEntry>();
+  private subCache = new Map<string, { mtimeMs: number; subs: SubagentInfo[] }>();
   private projectDir: string | undefined;
   private resolving: Promise<string | undefined> | undefined;
 
@@ -111,6 +112,58 @@ export class SessionStore {
     }
     metas.sort((a, b) => b.mtimeMs - a.mtimeMs);
     return metas;
+  }
+
+  /**
+   * List the subagents Claude spawned in a session, from its sidecar dir
+   * `<projectDir>/<sessionId>/subagents/agent-*.meta.json`. Cached by the dir's mtime.
+   */
+  async getSubagents(sessionId: string): Promise<SubagentInfo[]> {
+    const dir = await this.resolveDir();
+    if (!dir) {
+      return [];
+    }
+    const subDir = path.join(dir, sessionId, 'subagents');
+    let dirMtime: number;
+    try {
+      dirMtime = (await fs.stat(subDir)).mtimeMs;
+    } catch {
+      return []; // no subagents for this session
+    }
+    const cached = this.subCache.get(sessionId);
+    if (cached && cached.mtimeMs === dirMtime) {
+      return cached.subs;
+    }
+    let files: string[];
+    try {
+      files = (await fs.readdir(subDir)).filter((f) => f.endsWith('.meta.json'));
+    } catch {
+      return [];
+    }
+    const subs: SubagentInfo[] = [];
+    for (const f of files) {
+      const agentId = f.replace(/^agent-/, '').replace(/\.meta\.json$/, '');
+      try {
+        const meta = JSON.parse(await fs.readFile(path.join(subDir, f), 'utf8'));
+        let mtimeMs = dirMtime;
+        try {
+          mtimeMs = (await fs.stat(path.join(subDir, `agent-${agentId}.jsonl`))).mtimeMs;
+        } catch {
+          // transcript not written yet
+        }
+        subs.push({
+          agentId,
+          agentType: typeof meta.agentType === 'string' ? meta.agentType : 'agent',
+          description: typeof meta.description === 'string' ? meta.description : '',
+          mtimeMs,
+        });
+      } catch {
+        // skip unreadable/partial meta
+      }
+    }
+    subs.sort((a, b) => b.mtimeMs - a.mtimeMs);
+    this.subCache.set(sessionId, { mtimeMs: dirMtime, subs });
+    return subs;
   }
 
   invalidate(filePath: string): void {

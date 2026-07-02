@@ -3,6 +3,13 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.14] — 2026-07-03
+
+### Added
+- **Subagents as children** — expand a session to see the subagents Claude spawned in it
+  (read from the session's `subagents/` sidecar dir). Each shows its agent type + task
+  and a spinner while active. Cached by the sidecar dir's mtime.
+
 ## [0.1.13] — 2026-07-03
 
 ### Added

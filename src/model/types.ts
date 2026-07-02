@@ -39,6 +39,15 @@ export interface LiveTab {
   tab: vscode.Tab;
 }
 
+/** A subagent Claude spawned within a session (from the session's sidecar dir). */
+export interface SubagentInfo {
+  agentId: string;
+  agentType: string;
+  description: string;
+  /** Last activity of the subagent's transcript (ms). "running" is derived from this at render time. */
+  mtimeMs: number;
+}
+
 /** A session paired with its live-tab state and user organization. */
 export interface SessionEntry {
   meta: SessionMeta;
@@ -46,6 +55,7 @@ export interface SessionEntry {
   live?: LiveTab;
   pinned: boolean;
   groupId: string | null;
+  subagents: SubagentInfo[];
 }
 
 /** A user-defined, named + colored group (Chrome-style). */
