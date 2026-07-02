@@ -17,6 +17,7 @@ interface Acc {
   lastAssistantText?: string;
   gitBranch?: string;
   cwd?: string;
+  lastRole?: 'user' | 'assistant';
   messageCount: number;
   contextTokens: number;
   outputTokens: number;
@@ -74,6 +75,7 @@ export async function parseSession(
     lastAssistantText: acc.lastAssistantText,
     gitBranch: acc.gitBranch,
     cwd: acc.cwd,
+    lastRole: acc.lastRole,
     mtimeMs,
     messageCount: acc.messageCount,
     contextTokens: acc.contextTokens,
@@ -166,6 +168,7 @@ function processLines(lines: string[], acc: Acc): void {
         }
         break;
       case 'user': {
+        acc.lastRole = 'user';
         const t = extractText(r.message?.content);
         if (t) {
           if (!acc.firstPrompt) {
@@ -177,6 +180,7 @@ function processLines(lines: string[], acc: Acc): void {
         break;
       }
       case 'assistant': {
+        acc.lastRole = 'assistant';
         acc.messageCount++;
         const t = extractText(r.message?.content);
         if (t) {

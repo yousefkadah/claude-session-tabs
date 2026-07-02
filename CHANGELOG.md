@@ -3,6 +3,16 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.5] — 2026-07-02
+
+### Added
+- **"Waiting for you" indicator** — sessions where Claude sent the last message
+  (your turn) now show a yellow bell icon, sort to the top, and add a count
+  **badge on the Activity Bar icon**. In the horizontal strip they get a
+  highlighted yellow background. Makes it easy to spot conversations that need
+  your reply. (Claude's internal permission state isn't exposed to extensions,
+  so this is inferred from who sent the last message.)
+
 ## [0.1.4] — 2026-07-02
 
 ### Added

@@ -60,6 +60,10 @@ export function activate(context: vscode.ExtensionContext): void {
     try {
       await provider.build();
       provider.refresh();
+      const n = provider.getAttentionCount();
+      const badge = n > 0 ? { value: n, tooltip: `${n} session${n === 1 ? '' : 's'} waiting for you` } : undefined;
+      primaryView.badge = badge;
+      inlineView.badge = badge;
     } finally {
       building = false;
       if (pending) {

@@ -16,6 +16,8 @@ export interface SessionMeta {
   lastAssistantText?: string;
   gitBranch?: string;
   cwd?: string;
+  /** Role of the last user/assistant message — 'assistant' means it's your turn. */
+  lastRole?: 'user' | 'assistant';
   /** File modification time in ms since epoch. */
   mtimeMs: number;
   messageCount: number;
@@ -65,7 +67,7 @@ export interface PersistedState {
 
 // --- Serializable DTOs posted to the webview strip ---
 
-export type SessionStatus = 'active' | 'working' | 'open' | 'closed';
+export type SessionStatus = 'active' | 'waiting' | 'working' | 'open' | 'closed';
 
 export interface StripSession {
   id: string;

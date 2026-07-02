@@ -19,21 +19,48 @@ function themeColorVar(id: string): string {
   return `var(--vscode-${id.replace(/\./g, '-')})`;
 }
 
-/** Order sessions within a group: pinned first, then open, then active, then most-recent. */
+/**
+ * Session status. 'waiting' means Claude sent the last message — i.e. it's your
+ * turn / the session needs action from you. (Claude's real internal permission
+ * state isn't exposed to other extensions, so "who spoke last" is the signal.)
+ */
+function statusOf(e: SessionEntry): SessionStatus {
+  if (!e.open) {
+    return 'closed';
+  }
+  if (e.live?.isActive) {
+    return 'active';
+  }
+  if (e.meta.lastRole === 'assistant') {
+    return 'waiting';
+  }
+  if (e.meta.lastRole === 'user') {
+    return 'working';
+  }
+  return 'open';
+}
+
+/** Sort priority: pinned, then the active tab, then sessions waiting on you, then the rest. */
+function rank(e: SessionEntry): number {
+  if (e.pinned) {
+    return 0;
+  }
+  switch (statusOf(e)) {
+    case 'active':
+      return 1;
+    case 'waiting':
+      return 2;
+    case 'closed':
+      return 4;
+    default:
+      return 3;
+  }
+}
+
 function sortEntries(list: SessionEntry[]): SessionEntry[] {
   return [...list].sort((a, b) => {
-    if (a.pinned !== b.pinned) {
-      return a.pinned ? -1 : 1;
-    }
-    if (a.open !== b.open) {
-      return a.open ? -1 : 1;
-    }
-    const aActive = a.live?.isActive ? 1 : 0;
-    const bActive = b.live?.isActive ? 1 : 0;
-    if (aActive !== bActive) {
-      return bActive - aActive;
-    }
-    return b.meta.mtimeMs - a.meta.mtimeMs;
+    const r = rank(a) - rank(b);
+    return r !== 0 ? r : b.meta.mtimeMs - a.meta.mtimeMs;
   });
 }
 
@@ -250,17 +277,9 @@ export class SessionTreeProvider
     return node.kind === 'group' ? this.groupItem(node) : this.sessionItem(node);
   }
 
-  private sessionStatus(e: SessionEntry): SessionStatus {
-    if (!e.open) {
-      return 'closed';
-    }
-    if (e.live?.isActive) {
-      return 'active';
-    }
-    if (e.live?.isDirty) {
-      return 'working';
-    }
-    return 'open';
+  /** How many open sessions are waiting on you (Claude spoke last). Drives the view badge. */
+  getAttentionCount(): number {
+    return this.entries.filter((e) => statusOf(e) === 'waiting').length;
   }
 
   private sessionSnapshot(e: SessionEntry): StripSession {
@@ -272,7 +291,7 @@ export class SessionTreeProvider
       open: e.open,
       pinned: e.pinned,
       hasFile: !!m.filePath,
-      status: this.sessionStatus(e),
+      status: statusOf(e),
       branch: m.gitBranch && m.gitBranch !== 'HEAD' ? m.gitBranch : undefined,
       tokens: m.contextTokens > 0 ? formatTokens(m.contextTokens) + (m.approx ? '~' : '') : undefined,
       rel: formatRelative(m.mtimeMs),
@@ -328,19 +347,18 @@ export class SessionTreeProvider
   }
 
   private sessionIcon(e: SessionEntry): vscode.ThemeIcon {
-    if (e.open) {
-      if (e.live?.isActive) {
+    switch (statusOf(e)) {
+      case 'active':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
-      }
-      if (e.live?.isDirty) {
+      case 'waiting':
+        return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
+      case 'working':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.orange'));
-      }
-      return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.blue'));
+      case 'open':
+        return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.blue'));
+      default:
+        return e.pinned ? new vscode.ThemeIcon('pinned') : new vscode.ThemeIcon('circle-outline');
     }
-    if (e.pinned) {
-      return new vscode.ThemeIcon('pinned');
-    }
-    return new vscode.ThemeIcon('circle-outline');
   }
 
   private sessionContext(e: SessionEntry): string {
@@ -357,17 +375,14 @@ export class SessionTreeProvider
     md.supportThemeIcons = true; // isTrusted stays false — command links won't run
     md.appendMarkdown(`### ${escapeMd(m.title || 'Claude Code')}\n\n`);
 
-    let status: string;
-    if (e.open) {
-      status = e.live?.isActive
-        ? '$(circle-filled) Active'
-        : e.live?.isDirty
-          ? '$(circle-filled) Working'
-          : '$(circle-filled) Open';
-    } else {
-      status = '$(circle-outline) Closed';
-    }
-    md.appendMarkdown(status);
+    const STATUS_LABEL: Record<SessionStatus, string> = {
+      active: '$(circle-filled) Active',
+      waiting: '$(bell-dot) Waiting for you',
+      working: '$(circle-filled) Working…',
+      open: '$(circle-filled) Open',
+      closed: '$(circle-outline) Closed',
+    };
+    md.appendMarkdown(STATUS_LABEL[statusOf(e)]);
     if (e.pinned) {
       md.appendMarkdown('  ·  $(pinned) Pinned');
     }
