@@ -3,6 +3,14 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.9] — 2026-07-03
+
+### Fixed
+- **Start New Session in a group** now reliably adds the new session to the group.
+  The previous detection required the session to be tab-matched at the exact moment
+  it appeared, so it often landed in Ungrouped instead. Detection no longer requires
+  the match and uses a time window.
+
 ## [0.1.8] — 2026-07-03
 
 ### Added

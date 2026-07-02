@@ -63,9 +63,7 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     // Queue the group; the next new session that appears joins it (after its first message).
     provider.setPendingGroup(node.group.id);
     await startNewConversation();
-    void vscode.window.showInformationMessage(
-      `New session will join "${node.group.name}" once it has its first message.`,
-    );
+    void vscode.window.showInformationMessage(`The next new session will be added to "${node.group.name}".`);
   });
 
   reg('claudeSessionTabs.renameGroup', async (node?: TreeNode) => {

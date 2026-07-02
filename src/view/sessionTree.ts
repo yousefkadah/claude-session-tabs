@@ -105,14 +105,22 @@ export class SessionTreeProvider
     if (!p) {
       return;
     }
-    if (Date.now() - p.since > 90_000 || !this.groups.hasGroup(p.groupId)) {
+    if (Date.now() - p.since > 120_000 || !this.groups.hasGroup(p.groupId)) {
       this.pendingGroup = undefined;
       return;
     }
-    // A newly-appeared, open, transcript-backed session that isn't grouped yet.
-    const fresh = this.entries.find(
-      (e) => e.open && e.meta.filePath && !this.seenIds.has(e.meta.id) && !this.groups.groupOf(e.meta.id),
+    // The just-created session: a transcript-backed session we hadn't seen before,
+    // whose file changed after the click, and that isn't grouped yet. We do NOT
+    // require it to be matched to a tab (open) — matching can lag by a build, and
+    // requiring it caused the session to be marked "seen" before it could be caught.
+    const candidates = this.entries.filter(
+      (e) =>
+        e.meta.filePath &&
+        !this.seenIds.has(e.meta.id) &&
+        !this.groups.groupOf(e.meta.id) &&
+        e.meta.mtimeMs >= p.since - 15_000,
     );
+    const fresh = candidates.find((e) => e.live?.isActive) ?? candidates[0];
     if (fresh) {
       this.pendingGroup = undefined;
       void this.groups.assign(fresh.meta.id, p.groupId);
