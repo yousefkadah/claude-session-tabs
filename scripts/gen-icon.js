@@ -46,16 +46,6 @@ function roundRect(x0, y0, w, h, rad, color) {
   }
 }
 
-function disc(cx, cy, r, color) {
-  for (let y = cy - r; y <= cy + r; y++) {
-    for (let x = cx - r; x <= cx + r; x++) {
-      const dx = x - cx;
-      const dy = y - cy;
-      if (dx * dx + dy * dy <= r * r) px(x, y, color);
-    }
-  }
-}
-
 // --- minimal SVG path -> polygons ---
 function parsePath(d) {
   let i = 0;
@@ -190,10 +180,15 @@ const ox = ((256 - boxSize) / 2) * S;
 const oy = 30 * S;
 fillPath(CLAUDE_PATH, ox, oy, (boxSize / 24) * S, CLAY);
 
-// Session status dots (the "tabs" signature)
-disc(s(96), s(214), s(11), [74, 222, 128, 255]);
-disc(s(128), s(214), s(11), [245, 158, 11, 255]);
-disc(s(160), s(214), s(11), [96, 165, 250, 255]);
+// Session tabs (the "tabs" signature), colored like the status dots
+const TABS = [
+  [77, [74, 222, 128, 255]],
+  [113, [245, 158, 11, 255]],
+  [149, [96, 165, 250, 255]],
+];
+for (const [tx, color] of TABS) {
+  roundRect(s(tx), s(198), s(30), s(24), s(6), color);
+}
 
 // Downsample S x S -> 1
 const out = Buffer.alloc(OUT * OUT * 4);
