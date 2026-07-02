@@ -1,0 +1,26 @@
+# Changelog
+
+All notable changes to **Claude Session Tabs** are documented here.
+This project adheres to [Semantic Versioning](https://semver.org/).
+
+## [0.1.0] — 2026-07-02
+
+Initial release.
+
+### Added
+- **Sessions view** (Activity Bar): every Claude Code conversation in the
+  workspace, with colored status dots (active / working / open / closed).
+- **Rich hover preview**: last user + Claude message, git branch, context-token
+  count, message count, and relative activity time.
+- **Groups**: create named, colored groups; drag sessions between them;
+  collapse/expand; state persists per workspace.
+- **Horizontal strip** (bottom panel webview): a browser-like tab strip that
+  shares the same data, with hover previews, drag-to-group, and close/pin.
+- **Search** command: fuzzy-find sessions by title or last prompt.
+- **Pinning** and reopening of closed sessions.
+- In-product **walkthrough** (Getting Started).
+
+### Notes
+- Chrome-style features live in a sidebar/panel because the VS Code API cannot
+  customize the native editor tab bar (no tab-hover API, tabs are read-only
+  except `close()`). See `DESIGN.md`.
