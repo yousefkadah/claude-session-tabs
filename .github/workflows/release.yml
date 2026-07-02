@@ -12,6 +12,11 @@ permissions:
 jobs:
   release:
     runs-on: ubuntu-latest
+    # Map secrets to env so they can be referenced in `if:` (the `secrets`
+    # context itself is not allowed inside `if` expressions).
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     steps:
       - uses: actions/checkout@v4
 
@@ -35,14 +40,10 @@ jobs:
 
       # Publishes to the VS Code Marketplace only if the VSCE_PAT secret is configured.
       - name: Publish to VS Code Marketplace
-        if: ${{ secrets.VSCE_PAT != '' }}
-        env:
-          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        if: ${{ env.VSCE_PAT != '' }}
         run: npx --yes @vscode/vsce publish --no-dependencies -p "$VSCE_PAT"
 
       # Optional: also publish to Open VSX if OVSX_PAT is set.
       - name: Publish to Open VSX
-        if: ${{ secrets.OVSX_PAT != '' }}
-        env:
-          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        if: ${{ env.OVSX_PAT != '' }}
         run: npx --yes ovsx publish claude-session-tabs.vsix -p "$OVSX_PAT"
