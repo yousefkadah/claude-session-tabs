@@ -1,0 +1,48 @@
+name: Release
+
+# Trigger by pushing a version tag, e.g.:
+#   git tag v0.1.0 && git push origin v0.1.0
+on:
+  push:
+    tags: ['v*']
+
+permissions:
+  contents: write # needed to create the GitHub Release
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+      - name: Package VSIX
+        run: npx --yes @vscode/vsce package --no-dependencies -o claude-session-tabs.vsix
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: claude-session-tabs.vsix
+          generate_release_notes: true
+
+      # Publishes to the VS Code Marketplace only if the VSCE_PAT secret is configured.
+      - name: Publish to VS Code Marketplace
+        if: ${{ secrets.VSCE_PAT != '' }}
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: npx --yes @vscode/vsce publish --no-dependencies -p "$VSCE_PAT"
+
+      # Optional: also publish to Open VSX if OVSX_PAT is set.
+      - name: Publish to Open VSX
+        if: ${{ secrets.OVSX_PAT != '' }}
+        env:
+          OVSX_PAT: ${{ secrets.OVSX_PAT }}
+        run: npx --yes ovsx publish claude-session-tabs.vsix -p "$OVSX_PAT"

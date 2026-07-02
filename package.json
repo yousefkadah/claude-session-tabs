@@ -312,7 +312,8 @@
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "esbuild test/smoke.ts --bundle --platform=node --external:vscode --outfile=dist/smoke.cjs --format=cjs && node dist/smoke.cjs"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",

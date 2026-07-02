@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import type * as vscode from 'vscode';
 
 /** Parsed metadata for one Claude Code session transcript (.jsonl). */
 export interface SessionMeta {

@@ -5,6 +5,15 @@ Chrome-style tab management for the **Claude Code** VS Code extension: named + c
 > **Why a sidebar and not the real tab bar?**
 > VS Code's extension API is deliberately limited here: the editor tab hover has **no** customization API (stable or proposed), the tab API is **read-only except `close()`**, and there's **no** way to color or group individual webview tabs. The only extensions that paint the tab bar do it by patching VS Code's files on disk, which breaks on every update and triggers a "corrupt installation" warning. So this extension mirrors your Claude tabs into a proper sidebar where all of these features *are* supported APIs. See [DESIGN.md](DESIGN.md) for the full API analysis.
 
+## Demo
+
+<p align="center">
+  <img src="resources/icon.png" width="96" alt="Claude Session Tabs" /><br/>
+  <em>Demo GIF coming soon — record the Sessions sidebar + the bottom strip, save it as <code>media/demo.gif</code>, then uncomment the line below.</em>
+</p>
+
+<!-- ![Claude Session Tabs — grouped sessions, rich hovers, and the horizontal strip](media/demo.gif) -->
+
 ## Features
 
 - **Live tab mirror** — every open Claude Code conversation, updated as you switch/open/close tabs.
