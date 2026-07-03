@@ -19,11 +19,8 @@ function themeColorVar(id: string): string {
   return `var(--vscode-${id.replace(/\./g, '-')})`;
 }
 
-/** A transcript modified within this window is treated as actively "working". */
-const WORKING_MS = 15_000;
-
 /** A subagent whose transcript changed within this window is treated as still running.
- * Wider than WORKING_MS to tolerate gaps while a subagent waits on a long tool call. */
+ * Wide enough to tolerate gaps while a subagent waits on a long tool call. */
 const SUBAGENT_ACTIVE_MS = 60_000;
 
 function isSubagentRunning(s: SubagentInfo): boolean {
@@ -31,26 +28,21 @@ function isSubagentRunning(s: SubagentInfo): boolean {
 }
 
 /**
- * Session status derived from what we can observe:
+ * Session status from what we can observe:
  * - closed: no live tab.
- * - needs-action: Claude ended its last turn on an unanswered question/plan (AskUserQuestion /
- *   ExitPlanMode) and isn't currently writing — it's waiting on you.
- * - working: the transcript was written in the last {@link WORKING_MS} — Claude is generating.
+ * - needs-action: Claude's last turn ended on an unanswered question/plan (AskUserQuestion /
+ *   ExitPlanMode) — it's waiting on you. Content-based, so unaffected by transcript write lag.
  * - active: the tab you're currently viewing.
  * - open: open but idle.
- * (Claude's own needs-action tab icon isn't exposed to extensions, so we infer from the
- * transcript; "working" is reliable, "needs-action" is a strong heuristic.)
+ * (There's no real-time "Claude is generating" signal — the transcript isn't written live —
+ * so we don't try to show one.)
  */
 function statusOf(e: SessionEntry): SessionStatus {
   if (!e.open) {
     return 'closed';
   }
-  const writing = Date.now() - e.meta.mtimeMs < WORKING_MS;
-  if (e.meta.pendingAsk && !writing) {
+  if (e.meta.pendingAsk) {
     return 'needs-action';
-  }
-  if (writing) {
-    return 'working';
   }
   if (e.live?.isActive) {
     return 'active';
@@ -58,7 +50,7 @@ function statusOf(e: SessionEntry): SessionStatus {
   return 'open';
 }
 
-/** Sort priority: pinned, then needs-action, then working, then active, then open, then closed. */
+/** Sort priority: pinned, then needs-action, then active, then open, then closed. */
 function rank(e: SessionEntry): number {
   if (e.pinned) {
     return 0;
@@ -66,14 +58,12 @@ function rank(e: SessionEntry): number {
   switch (statusOf(e)) {
     case 'needs-action':
       return 1;
-    case 'working':
-      return 2;
     case 'active':
-      return 3;
+      return 2;
     case 'closed':
-      return 5;
-    default:
       return 4;
+    default:
+      return 3;
   }
 }
 
@@ -480,8 +470,6 @@ export class SessionTreeProvider
     switch (statusOf(e)) {
       case 'needs-action':
         return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
-      case 'working':
-        return new vscode.ThemeIcon('sync', new vscode.ThemeColor('charts.blue'));
       case 'active':
         return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
       case 'open':
@@ -512,7 +500,6 @@ export class SessionTreeProvider
 
     const STATUS_LABEL: Record<SessionStatus, string> = {
       active: '$(circle-filled) Active',
-      working: '$(sync) Working…',
       'needs-action': '$(bell-dot) Waiting for you',
       open: '$(circle-filled) Open',
       closed: '$(circle-outline) Closed',

@@ -3,6 +3,14 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.16] — 2026-07-03
+
+### Removed
+- The **"working" 🔄 indicator**. Claude Code doesn't write its transcript in real time
+  (measured multi-minute gaps mid-turn), so an mtime-based "generating now" signal was
+  unreliable. Status is now **active / needs-action / open / closed** — all accurate.
+  ("Needs-action" is content-based, so it's unaffected.)
+
 ## [0.1.15] — 2026-07-03
 
 ### Changed

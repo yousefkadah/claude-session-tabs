@@ -80,7 +80,7 @@ export interface PersistedState {
 
 // --- Serializable DTOs posted to the webview strip ---
 
-export type SessionStatus = 'active' | 'working' | 'needs-action' | 'open' | 'closed';
+export type SessionStatus = 'active' | 'needs-action' | 'open' | 'closed';
 
 export interface StripSession {
   id: string;

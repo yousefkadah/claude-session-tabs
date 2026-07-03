@@ -71,7 +71,6 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
     border-color: var(--vscode-charts-yellow);
     background: color-mix(in srgb, var(--vscode-charts-yellow) 18%, var(--vscode-editor-background));
   }
-  .tab.working { border-color: var(--vscode-charts-blue); }
   .tab.closed { opacity: 0.6; }
   .tab .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--vscode-charts-blue); flex: 0 0 auto; }
   .tab .title { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -118,12 +117,11 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   const DOT = {
     active: 'var(--vscode-charts-green)',
-    working: 'var(--vscode-charts-blue)',
     'needs-action': 'var(--vscode-charts-yellow)',
     open: 'var(--vscode-charts-blue)',
     closed: 'var(--vscode-descriptionForeground)',
   };
-  const GLYPH = { working: '↻', 'needs-action': '🔔' };
+  const GLYPH = { 'needs-action': '🔔' };
 
   function esc(s) { const d = document.createElement('div'); d.textContent = s == null ? '' : String(s); return d.innerHTML; }
 
@@ -218,7 +216,7 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
 
   function showPop(ev, s) {
     let html = '<div class="h">' + esc(s.title) + '</div>';
-    const statusLabel = { active: 'Active', working: 'Working…', 'needs-action': 'Waiting for you', open: 'Open', closed: 'Closed' }[s.status];
+    const statusLabel = { active: 'Active', 'needs-action': 'Waiting for you', open: 'Open', closed: 'Closed' }[s.status];
     html += '<div class="row"><span class="k">' + statusLabel + (s.pinned ? ' · Pinned' : '') + '</span></div>';
     if (s.lastUser) html += '<div class="row"><span class="k">You:</span> ' + esc(s.lastUser) + '</div>';
     if (s.lastAssistant) html += '<div class="row"><span class="k">Claude:</span> ' + esc(s.lastAssistant) + '</div>';

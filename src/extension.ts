@@ -48,8 +48,7 @@ export function activate(context: vscode.ExtensionContext): void {
   let disposed = false;
   context.subscriptions.push({ dispose: () => (disposed = true) });
 
-  // "needs-action" count on the view icon. Recomputed on rebuild AND on the timer,
-  // because working→needs-action is time-based (no file event fires when a session goes idle).
+  // "needs-action" count on the view icon (sessions where Claude asked and is waiting).
   const updateBadge = (): void => {
     const n = provider.getAttentionCount();
     const badge =
@@ -117,11 +116,11 @@ export function activate(context: vscode.ExtensionContext): void {
   });
 
   // Keep relative timestamps ("2m ago") current.
-  // Frequent tick so working→idle→needs-action transitions (which are time-based) stay live.
+  // Periodic tick: refresh relative times and drop subagents that are no longer active.
   const timer = setInterval(() => {
     provider.refresh();
     updateBadge();
-  }, 10_000);
+  }, 15_000);
   context.subscriptions.push({ dispose: () => clearInterval(timer) });
 
   registerCommands(context, services);
