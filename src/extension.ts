@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
+import { AttentionStore } from './data/attentionStore';
 import { GroupTreeNode, SessionTreeProvider, TreeNode } from './view/sessionTree';
 import { StripViewProvider } from './view/strip/stripView';
 import { ExtensionServices, createStripHandlers, registerCommands } from './commands';
@@ -79,7 +80,44 @@ export function activate(context: vscode.ExtensionContext): void {
     }
   };
   const debouncedRebuild = debounce(() => void rebuild(), 250);
-  const services: ExtensionServices = { store, groups, provider, rebuild: () => void rebuild() };
+
+  // Real-time "needs you" bell, driven by Claude Code hooks (opt-in). Hooks write
+  // marker files into attention.d; we watch that directory and re-scan on change.
+  const attention = new AttentionStore(context.extensionUri);
+  let attentionWatcher: vscode.FileSystemWatcher | undefined;
+  const refreshAttention = (): void => {
+    provider.setAttention(attention.scan());
+    void rebuild();
+  };
+  const syncAttention = (): void => {
+    const installed = attention.isInstalled();
+    void vscode.commands.executeCommand('setContext', 'claudeSessionTabs.attentionInstalled', installed);
+    if (installed && !attentionWatcher && !disposed) {
+      attention.ensureDir();
+      const w = vscode.workspace.createFileSystemWatcher(
+        new vscode.RelativePattern(vscode.Uri.file(AttentionStore.attentionDir), '*'),
+      );
+      w.onDidChange(refreshAttention);
+      w.onDidCreate(refreshAttention);
+      w.onDidDelete(refreshAttention);
+      attentionWatcher = w;
+      context.subscriptions.push(w);
+    } else if (!installed && attentionWatcher) {
+      attentionWatcher.dispose();
+      attentionWatcher = undefined;
+      provider.setAttention(new Map());
+    }
+    refreshAttention();
+  };
+
+  const services: ExtensionServices = {
+    store,
+    groups,
+    provider,
+    attention,
+    rebuild: () => void rebuild(),
+    syncAttention,
+  };
 
   context.subscriptions.push(
     vscode.window.tabGroups.onDidChangeTabs(debouncedRebuild),
@@ -134,6 +172,9 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   void rebuild();
+  // Sets the installed context key and, if hooks are already installed, starts
+  // the attention watcher and does an initial scan.
+  syncAttention();
 }
 
 export function deactivate(): void {

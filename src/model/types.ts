@@ -58,6 +58,11 @@ export interface SessionEntry {
   pinned: boolean;
   groupId: string | null;
   subagents: SubagentInfo[];
+  /**
+   * Marker-file mtime (ms) if a Claude Code hook flagged this session as needing
+   * you (a real-time, lag-free signal); undefined when no marker is present.
+   */
+  attentionMtime?: number;
 }
 
 /** A user-defined, named + colored group (Chrome-style). */

@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.17",
+  "version": "0.1.18",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -173,6 +173,18 @@
         "title": "Show Active Only",
         "category": "Claude Code Tabs",
         "icon": "$(eye-closed)"
+      },
+      {
+        "command": "claudeSessionTabs.enableAttention",
+        "title": "Enable Real-time Attention…",
+        "category": "Claude Code Tabs",
+        "icon": "$(bell)"
+      },
+      {
+        "command": "claudeSessionTabs.disableAttention",
+        "title": "Disable Real-time Attention",
+        "category": "Claude Code Tabs",
+        "icon": "$(bell-slash)"
       }
     ],
     "menus": {
@@ -191,6 +203,16 @@
           "command": "claudeSessionTabs.refresh",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/",
           "group": "navigation@3"
+        },
+        {
+          "command": "claudeSessionTabs.enableAttention",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && !claudeSessionTabs.attentionInstalled",
+          "group": "9_hooks@1"
+        },
+        {
+          "command": "claudeSessionTabs.disableAttention",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && claudeSessionTabs.attentionInstalled",
+          "group": "9_hooks@2"
         }
       ],
       "view/item/context": [
@@ -323,6 +345,14 @@
         {
           "command": "claudeSessionTabs.deleteGroup",
           "when": "false"
+        },
+        {
+          "command": "claudeSessionTabs.enableAttention",
+          "when": "!claudeSessionTabs.attentionInstalled"
+        },
+        {
+          "command": "claudeSessionTabs.disableAttention",
+          "when": "claudeSessionTabs.attentionInstalled"
         }
       ]
     },

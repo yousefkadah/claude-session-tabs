@@ -26,6 +26,7 @@
 - **🗂️ Groups** — create named, colored groups and drag sessions between them, or **start a new session straight into a group** with the group's `+` button. They collapse and persist per workspace, just like Chrome tab groups.
 - **🫥 Active by default, reveal on demand** — every group (and **Ungrouped**) shows only its **active/open** (and pinned) sessions, with a `N hidden` count. Hit the **👁 eye** on the group to reveal its closed sessions, and again to collapse back. The choice sticks per group.
 - **🔔 Waiting-for-you alerts** — when Claude's last turn was an unanswered **question or plan** (`AskUserQuestion` / `ExitPlanMode`), that session floats to the top with a **bell + count badge** on the icon. A real transcript signal — no manual flagging.
+- **⚡ Real-time attention (opt-in)** — enable **Claude Code hooks** from the view's **⋯** menu and the bell lights the *instant* Claude asks, plans, or needs permission — no transcript lag. It clears the moment you reply, is fully reversible, and stays 100% local (a marker folder the extension watches). See [Real-time attention](#-real-time-attention-optional).
 - **🤖 Live subagents** — expand a session to see the subagents Claude is **currently running** inside it (finished ones are hidden); **click one** to open a panel of its task and what it did.
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
 - **🟢 Live status** — at a glance: **active** (green), **waiting for you** (🔔 yellow), **open** (blue), **closed** (outline).
@@ -72,11 +73,24 @@ All three share one data source and stay in sync — use whichever fits your flo
 
 Right‑click any session or group for actions (pin, move to group, rename/recolor/delete group); use the view's title bar for **Search**, **New Group**, and **Refresh**.
 
+## ⚡ Real-time attention (optional)
+
+By default the bell reads the transcript, which Claude Code doesn't flush in real time, so it can lag. To make it **instant**, open the view's **⋯** menu → **Enable Real-time Attention**. With your confirmation it adds three [Claude Code hooks](https://docs.claude.com/en/docs/claude-code/hooks) to `~/.claude/settings.json`:
+
+| Hook | Fires when | Effect |
+| --- | --- | --- |
+| `PreToolUse` (`AskUserQuestion` / `ExitPlanMode`) | Claude asks or presents a plan | 🔔 bell on |
+| `Notification` (permission prompt) | Claude needs permission | 🔔 bell on |
+| `UserPromptSubmit` | you reply | bell off |
+
+Each hook just writes/removes a marker file under `~/.claude/hooks/claude-tabs/`; the extension watches that folder. **Nothing leaves your machine.** It self-heals — a stale marker is ignored once the transcript catches up — and **Disable Real-time Attention** removes the hooks and scripts, restoring your `settings.json`. Start a new Claude Code session (or reload) after enabling so it picks up the hooks.
+
 ## ⚙️ How it works
 
 - Detects Claude tabs via the Tab API (`TabInputWebview` with the `claudeVSCodePanel` view type).
 - Reads session content from `~/.claude/projects/<workspace>/*.jsonl` (subagent transcripts excluded), cached by file mtime so unchanged sessions are never re‑parsed.
 - Opens/reveals a session with the Claude Code command `claude-vscode.editor.open`.
+- Optionally installs Claude Code hooks for a lag-free attention bell — see [Real-time attention](#-real-time-attention-optional).
 
 ## 🔧 Settings
 

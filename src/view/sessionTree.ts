@@ -29,10 +29,24 @@ function isSubagentRunning(s: SubagentInfo): boolean {
 }
 
 /**
+ * Whether the session is waiting on you. Two signals, either one is enough:
+ * - `pendingAsk` (transcript): Claude's last turn ended on an unanswered
+ *   AskUserQuestion / ExitPlanMode. Authoritative but lags transcript writes.
+ * - a hook marker (`attentionMtime`): fired the instant Claude asked, so it's
+ *   lag-free. We trust it until the transcript catches up *past* it and shows
+ *   the ask resolved — that reconciliation clears a stale marker without flicker.
+ */
+function needsAction(e: SessionEntry): boolean {
+  if (e.meta.pendingAsk) {
+    return true;
+  }
+  return e.attentionMtime !== undefined && e.meta.mtimeMs <= e.attentionMtime;
+}
+
+/**
  * Session status from what we can observe:
  * - closed: no live tab.
- * - needs-action: Claude's last turn ended on an unanswered question/plan (AskUserQuestion /
- *   ExitPlanMode) — it's waiting on you. Content-based, so unaffected by transcript write lag.
+ * - needs-action: waiting on you (see needsAction).
  * - active: the tab you're currently viewing.
  * - open: open but idle.
  * (There's no real-time "Claude is generating" signal — the transcript isn't written live —
@@ -42,7 +56,7 @@ function statusOf(e: SessionEntry): SessionStatus {
   if (!e.open) {
     return 'closed';
   }
-  if (e.meta.pendingAsk) {
+  if (needsAction(e)) {
     return 'needs-action';
   }
   if (e.live?.isActive) {
@@ -123,6 +137,8 @@ export class SessionTreeProvider
   private entries: SessionEntry[] = [];
   private maxRecent = 25;
   private showClosed = true;
+  /** sessionId -> hook marker mtime (ms). Real-time "needs you" flags from Claude Code hooks. */
+  private attention = new Map<string, number>();
   /**
    * When the user starts a new session from a group, we latch onto the new tab
    * (its Tab object is stable even while the session has no id yet), show it in
@@ -197,6 +213,11 @@ export class SessionTreeProvider
     this.showClosed = showClosed;
   }
 
+  /** Replace the hook-driven attention markers (sessionId -> marker mtime). */
+  setAttention(map: Map<string, number>): void {
+    this.attention = map;
+  }
+
   refresh(): void {
     this._onDidChangeTreeData.fire();
   }
@@ -227,6 +248,7 @@ export class SessionTreeProvider
         pinned: this.groups.isPinned(meta.id),
         groupId: this.groups.groupOf(meta.id),
         subagents: await this.store.getSubagents(meta.id),
+        attentionMtime: this.attention.get(meta.id),
       });
     }
 

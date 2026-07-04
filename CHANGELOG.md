@@ -3,6 +3,22 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.18] — 2026-07-04
+
+### Added
+- **Real-time "needs you" bell via Claude Code hooks (opt-in).** Turn it on from the
+  view's **⋯** menu → **Enable Real-time Attention** (it shows exactly what it will add
+  and asks first). It registers three hooks in `~/.claude/settings.json` that light the
+  bell the **instant** Claude asks a question, presents a plan, or needs permission —
+  no waiting on the transcript, which Claude Code doesn't write in real time. The bell
+  clears the moment you reply. Fully reversible via **Disable Real-time Attention**; the
+  hooks only touch a local marker folder the extension watches — nothing is sent anywhere.
+
+### Changed
+- The `needs-action` status now combines the hook signal (instant) with the existing
+  transcript detection (authoritative) and self-heals: a stale marker is ignored once the
+  transcript advances past it, so the bell never sticks.
+
 ## [0.1.17] — 2026-07-04
 
 ### Added

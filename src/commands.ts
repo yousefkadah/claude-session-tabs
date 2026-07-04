@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
+import { AttentionStore } from './data/attentionStore';
 import { SessionTreeProvider, TreeNode, UNGROUPED_ID } from './view/sessionTree';
 import { StripHandlers } from './view/strip/stripView';
 import { showSubagentPanel } from './view/subagent/subagentPanel';
@@ -21,12 +22,15 @@ export interface ExtensionServices {
   store: SessionStore;
   groups: GroupStore;
   provider: SessionTreeProvider;
+  attention: AttentionStore;
   /** Fire-and-forget rebuild of the tree + strip. */
   rebuild: () => void;
+  /** Re-evaluate hook install state: (re)start/stop the watcher and rescan markers. */
+  syncAttention: () => void;
 }
 
 export function registerCommands(context: vscode.ExtensionContext, services: ExtensionServices): void {
-  const { store, groups, provider, rebuild } = services;
+  const { store, groups, provider, attention, rebuild, syncAttention } = services;
   const reg = (id: string, fn: (...args: never[]) => unknown): void => {
     context.subscriptions.push(vscode.commands.registerCommand(id, fn as (...args: unknown[]) => unknown));
   };
@@ -141,6 +145,33 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
   };
   reg('claudeSessionTabs.showInactive', toggleInactive);
   reg('claudeSessionTabs.hideInactive', toggleInactive);
+
+  reg('claudeSessionTabs.enableAttention', async () => {
+    const proceed = await vscode.window.showInformationMessage(
+      attention.describeInstall(),
+      { modal: true },
+      'Install hooks',
+    );
+    if (proceed !== 'Install hooks') {
+      return;
+    }
+    try {
+      await attention.install();
+    } catch (e) {
+      void vscode.window.showErrorMessage(`Couldn't install hooks: ${(e as Error).message}`);
+      return;
+    }
+    syncAttention();
+    void vscode.window.showInformationMessage(
+      'Real-time attention enabled. Start a new Claude Code session (or reload the window) so it picks up the hooks.',
+    );
+  });
+
+  reg('claudeSessionTabs.disableAttention', async () => {
+    await attention.uninstall();
+    syncAttention();
+    void vscode.window.showInformationMessage('Real-time attention disabled — hooks removed from ~/.claude.');
+  });
 
   reg('claudeSessionTabs.search', async () => {
     const metas = await store.list();
