@@ -12,7 +12,8 @@ import {
 } from '../util/format';
 
 const DND_MIME = 'application/vnd.claude-session-tabs';
-const UNGROUPED_ID = '__ungrouped__';
+/** Key for the implicit Ungrouped bucket in per-group persisted state (show-inactive). */
+export const UNGROUPED_ID = '__ungrouped__';
 
 /** "charts.blue" -> "var(--vscode-charts-blue)" for use in the webview strip. */
 function themeColorVar(id: string): string {
@@ -76,7 +77,14 @@ function sortEntries(list: SessionEntry[]): SessionEntry[] {
 
 export class GroupTreeNode {
   readonly kind = 'group' as const;
-  constructor(public group: GroupDef | null, public entries: SessionEntry[]) {}
+  constructor(
+    public group: GroupDef | null,
+    public entries: SessionEntry[],
+    /** Closed sessions hidden by the "active only" default (0 when revealing them). */
+    public hiddenCount = 0,
+    /** Whether this group is currently revealing its closed sessions. */
+    public showingInactive = false,
+  ) {}
 }
 
 export class SessionTreeNode {
@@ -90,6 +98,14 @@ export class SubagentTreeNode {
 }
 
 export type TreeNode = GroupTreeNode | SessionTreeNode | SubagentTreeNode;
+
+/** A group with its display-filtered entries and how many closed ones are hidden. */
+interface ComputedGroup {
+  group: GroupDef | null;
+  entries: SessionEntry[];
+  hidden: number;
+  showingInactive: boolean;
+}
 
 export class SessionTreeProvider
   implements vscode.TreeDataProvider<TreeNode>, vscode.TreeDragAndDropController<TreeNode>, vscode.Disposable
@@ -311,8 +327,34 @@ export class SessionTreeProvider
     return vis;
   }
 
+  private groupKey(g: GroupDef | null): string {
+    return g ? g.id : UNGROUPED_ID;
+  }
+
+  /**
+   * Apply the per-group "show active only" default. Unless the group is revealing its
+   * closed sessions, drop the ones that are neither open nor pinned (pinning is an
+   * explicit keep-visible signal), reporting how many were hidden.
+   */
+  private applyInactiveFilter(group: GroupDef | null, sorted: SessionEntry[]): ComputedGroup {
+    const showingInactive = this.groups.isShowInactive(this.groupKey(group));
+    if (showingInactive) {
+      return { group, entries: sorted, hidden: 0, showingInactive };
+    }
+    const entries: SessionEntry[] = [];
+    let hidden = 0;
+    for (const e of sorted) {
+      if (e.open || e.pinned) {
+        entries.push(e);
+      } else {
+        hidden++;
+      }
+    }
+    return { group, entries, hidden, showingInactive };
+  }
+
   /** Group the currently-visible entries; shared by the tree and the webview strip. */
-  private computeGroups(): { group: GroupDef | null; entries: SessionEntry[] }[] {
+  private computeGroups(): ComputedGroup[] {
     const vis = this.visibleEntries();
     const byGroup = new Map<string, SessionEntry[]>();
     const ungrouped: SessionEntry[] = [];
@@ -328,19 +370,21 @@ export class SessionTreeProvider
         ungrouped.push(e);
       }
     }
-    const out: { group: GroupDef | null; entries: SessionEntry[] }[] = [];
+    const out: ComputedGroup[] = [];
     for (const g of this.groups.groups) {
-      out.push({ group: g, entries: sortEntries(byGroup.get(g.id) ?? []) });
+      out.push(this.applyInactiveFilter(g, sortEntries(byGroup.get(g.id) ?? [])));
     }
     if (ungrouped.length) {
-      out.push({ group: null, entries: sortEntries(ungrouped) });
+      out.push(this.applyInactiveFilter(null, sortEntries(ungrouped)));
     }
     return out;
   }
 
   getChildren(element?: TreeNode): TreeNode[] {
     if (!element) {
-      return this.computeGroups().map(({ group, entries }) => new GroupTreeNode(group, entries));
+      return this.computeGroups().map(
+        (c) => new GroupTreeNode(c.group, c.entries, c.hidden, c.showingInactive),
+      );
     }
     if (element.kind === 'group') {
       return element.entries.map((e) => new SessionTreeNode(e));
@@ -356,10 +400,12 @@ export class SessionTreeProvider
 
   /** Serializable snapshot for the webview strip. */
   getSnapshot(): StripData {
-    const groups = this.computeGroups().map(({ group, entries }) => ({
+    const groups = this.computeGroups().map(({ group, entries, hidden, showingInactive }) => ({
       id: group ? group.id : null,
       name: group ? group.name : 'Ungrouped',
       colorVar: group ? themeColorVar(group.color) : null,
+      showingInactive,
+      hidden,
       sessions: entries.map((e) => this.sessionSnapshot(e)),
     }));
     return {
@@ -424,9 +470,22 @@ export class SessionTreeProvider
       : vscode.TreeItemCollapsibleState.Expanded;
     const item = new vscode.TreeItem(label, collapsed);
     item.id = 'group:' + (g ? g.id : UNGROUPED_ID);
-    const openCount = node.entries.filter((e) => e.open).length;
-    item.description = openCount ? `${openCount} open · ${node.entries.length}` : `${node.entries.length}`;
-    item.contextValue = g ? 'group' : 'ungrouped';
+    const shown = node.entries.length;
+    const open = node.entries.filter((e) => e.open).length;
+    const parts: string[] = [];
+    if (open && open !== shown) {
+      parts.push(`${open} open`);
+    }
+    if (shown) {
+      parts.push(`${shown}`);
+    }
+    if (node.hiddenCount) {
+      parts.push(`${node.hiddenCount} hidden`);
+    }
+    item.description = parts.join(' · ') || '0';
+    // The state token drives which eye action (show/hide) is offered inline.
+    const base = g ? 'group' : 'ungrouped';
+    item.contextValue = `${base} ${node.showingInactive ? 'showing-inactive' : 'hiding-inactive'}`;
     item.iconPath = g
       ? new vscode.ThemeIcon('folder', new vscode.ThemeColor(g.color))
       : new vscode.ThemeIcon('inbox');

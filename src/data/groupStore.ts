@@ -35,6 +35,23 @@ export class GroupStore implements vscode.Disposable {
     return this.state.pinned.includes(sessionId);
   }
 
+  /** Whether a group (by key: group id or '__ungrouped__') reveals its closed sessions. */
+  isShowInactive(key: string): boolean {
+    return this.state.showInactive?.includes(key) ?? false;
+  }
+
+  /** Flip a group's "reveal closed sessions" flag. */
+  async toggleShowInactive(key: string): Promise<void> {
+    const arr = this.state.showInactive ?? (this.state.showInactive = []);
+    const i = arr.indexOf(key);
+    if (i >= 0) {
+      arr.splice(i, 1);
+    } else {
+      arr.push(key);
+    }
+    await this.save();
+  }
+
   hasGroup(id: string): boolean {
     return this.state.groups.some((g) => g.id === id);
   }
@@ -68,6 +85,9 @@ export class GroupStore implements vscode.Disposable {
       if (this.state.assignments[sessionId] === id) {
         delete this.state.assignments[sessionId];
       }
+    }
+    if (this.state.showInactive) {
+      this.state.showInactive = this.state.showInactive.filter((k) => k !== id);
     }
     await this.save();
   }

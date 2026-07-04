@@ -56,6 +56,11 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
     color: var(--gc, var(--vscode-descriptionForeground));
     padding: 0 2px; max-width: 120px; overflow: hidden; text-overflow: ellipsis;
   }
+  .group-eye {
+    all: unset; cursor: pointer; font-size: 11px; opacity: 0.7;
+    padding: 1px 4px; border-radius: 3px; flex: 0 0 auto;
+  }
+  .group-eye:hover { background: var(--vscode-toolbar-hoverBackground); opacity: 1; }
   .ungrouped { border-style: dashed; }
   .tabs { display: inline-flex; align-items: center; gap: 6px; }
   .tab {
@@ -152,6 +157,20 @@ export function renderStripHtml(cspSource: string, nonce: string): string {
       label.className = 'group-label';
       label.textContent = g.name + ' · ' + g.sessions.length;
       gEl.appendChild(label);
+
+      // Eye toggle: reveal hidden closed sessions, or collapse back to active-only.
+      if (g.showingInactive || g.hidden > 0) {
+        const eye = document.createElement('button');
+        eye.className = 'group-eye';
+        eye.textContent = g.showingInactive ? '🙈' : '👁';
+        eye.title = g.showingInactive ? 'Show active only' : 'Show ' + g.hidden + ' closed';
+        const gid = g.id;
+        eye.addEventListener('click', (ev) => {
+          ev.stopPropagation();
+          vscode.postMessage({ type: 'toggleInactive', groupId: gid });
+        });
+        gEl.appendChild(eye);
+      }
 
       const tabs = document.createElement('div');
       tabs.className = 'tabs';

@@ -24,6 +24,7 @@
 ## ✨ Features
 
 - **🗂️ Groups** — create named, colored groups and drag sessions between them, or **start a new session straight into a group** with the group's `+` button. They collapse and persist per workspace, just like Chrome tab groups.
+- **🫥 Active by default, reveal on demand** — every group (and **Ungrouped**) shows only its **active/open** (and pinned) sessions, with a `N hidden` count. Hit the **👁 eye** on the group to reveal its closed sessions, and again to collapse back. The choice sticks per group.
 - **🔔 Waiting-for-you alerts** — when Claude's last turn was an unanswered **question or plan** (`AskUserQuestion` / `ExitPlanMode`), that session floats to the top with a **bell + count badge** on the icon. A real transcript signal — no manual flagging.
 - **🤖 Live subagents** — expand a session to see the subagents Claude is **currently running** inside it (finished ones are hidden); **click one** to open a panel of its task and what it did.
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.

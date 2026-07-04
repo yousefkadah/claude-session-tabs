@@ -75,6 +75,11 @@ export interface PersistedState {
   /** sessionId -> groupId */
   assignments: Record<string, string>;
   pinned: string[];
+  /**
+   * Group keys whose closed/inactive sessions are revealed. A key is a group id, or
+   * '__ungrouped__' for the implicit Ungrouped bucket. Absent = default (hidden).
+   */
+  showInactive?: string[];
   version: number;
 }
 
@@ -108,6 +113,10 @@ export interface StripGroup {
   id: string | null;
   name: string;
   colorVar: string | null;
+  /** Whether this group is currently revealing its closed/inactive sessions. */
+  showingInactive: boolean;
+  /** How many closed sessions are hidden by the "show active only" default. */
+  hidden: number;
   sessions: StripSession[];
 }
 

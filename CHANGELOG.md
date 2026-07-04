@@ -3,6 +3,15 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.1.17] — 2026-07-04
+
+### Added
+- **Active-only groups with a per-group reveal toggle.** Every group — including
+  **Ungrouped** — now shows only its **active/open** (and pinned) sessions by default.
+  Each group row has an **👁 eye** action (and the strip an eye button) to reveal its
+  closed sessions, plus a `N hidden` count. Click again to collapse back to active-only.
+  The choice persists per group, per workspace.
+
 ## [0.1.16] — 2026-07-03
 
 ### Removed

@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.16",
+  "version": "0.1.17",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -161,6 +161,18 @@
         "command": "claudeSessionTabs.openSubagent",
         "title": "Open Subagent",
         "category": "Claude Code Tabs"
+      },
+      {
+        "command": "claudeSessionTabs.showInactive",
+        "title": "Show Closed Sessions",
+        "category": "Claude Code Tabs",
+        "icon": "$(eye)"
+      },
+      {
+        "command": "claudeSessionTabs.hideInactive",
+        "title": "Show Active Only",
+        "category": "Claude Code Tabs",
+        "icon": "$(eye-closed)"
       }
     ],
     "menus": {
@@ -184,13 +196,33 @@
       "view/item/context": [
         {
           "command": "claudeSessionTabs.newSessionInGroup",
-          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /(^|\\s)group(\\s|$)/",
           "group": "inline@0"
         },
         {
+          "command": "claudeSessionTabs.showInactive",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /hiding-inactive/",
+          "group": "inline@1"
+        },
+        {
+          "command": "claudeSessionTabs.hideInactive",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /showing-inactive/",
+          "group": "inline@1"
+        },
+        {
           "command": "claudeSessionTabs.newSessionInGroup",
-          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /(^|\\s)group(\\s|$)/",
           "group": "0_new@1"
+        },
+        {
+          "command": "claudeSessionTabs.showInactive",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /hiding-inactive/",
+          "group": "0_new@2"
+        },
+        {
+          "command": "claudeSessionTabs.hideInactive",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /showing-inactive/",
+          "group": "0_new@2"
         },
         {
           "command": "claudeSessionTabs.togglePin",
@@ -229,17 +261,17 @@
         },
         {
           "command": "claudeSessionTabs.renameGroup",
-          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /(^|\\s)group(\\s|$)/",
           "group": "1_edit@1"
         },
         {
           "command": "claudeSessionTabs.recolorGroup",
-          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /(^|\\s)group(\\s|$)/",
           "group": "1_edit@2"
         },
         {
           "command": "claudeSessionTabs.deleteGroup",
-          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem == group",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && viewItem =~ /(^|\\s)group(\\s|$)/",
           "group": "9_danger@1"
         }
       ],
@@ -254,6 +286,14 @@
         },
         {
           "command": "claudeSessionTabs.openSubagent",
+          "when": "false"
+        },
+        {
+          "command": "claudeSessionTabs.showInactive",
+          "when": "false"
+        },
+        {
+          "command": "claudeSessionTabs.hideInactive",
           "when": "false"
         },
         {

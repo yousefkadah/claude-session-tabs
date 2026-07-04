@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
-import { SessionTreeProvider, TreeNode } from './view/sessionTree';
+import { SessionTreeProvider, TreeNode, UNGROUPED_ID } from './view/sessionTree';
 import { StripHandlers } from './view/strip/stripView';
 import { showSubagentPanel } from './view/subagent/subagentPanel';
 import { formatRelative, truncate } from './util/format';
@@ -131,6 +131,17 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     }
   });
 
+  // Show/Hide closed sessions in a group (both share one handler; two commands only
+  // so the inline icon can differ by current state).
+  const toggleInactive = async (node?: TreeNode): Promise<void> => {
+    if (node?.kind !== 'group') {
+      return;
+    }
+    await groups.toggleShowInactive(node.group ? node.group.id : UNGROUPED_ID);
+  };
+  reg('claudeSessionTabs.showInactive', toggleInactive);
+  reg('claudeSessionTabs.hideInactive', toggleInactive);
+
   reg('claudeSessionTabs.search', async () => {
     const metas = await store.list();
     type Item = vscode.QuickPickItem & { id: string };
@@ -186,6 +197,9 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
           if (msg.id) {
             void groups.assign(msg.id, msg.groupId ?? null);
           }
+          break;
+        case 'toggleInactive':
+          void groups.toggleShowInactive(msg.groupId ?? UNGROUPED_ID);
           break;
         case 'newGroup':
           void createGroupInteractive(groups);
