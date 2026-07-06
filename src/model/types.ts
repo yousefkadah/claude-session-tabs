@@ -85,6 +85,8 @@ export interface PersistedState {
    * '__ungrouped__' for the implicit Ungrouped bucket. Absent = default (hidden).
    */
   showInactive?: string[];
+  /** When true the tree buckets sessions by git branch instead of user groups. */
+  groupByBranch?: boolean;
   version: number;
 }
 

@@ -2,7 +2,7 @@
   "name": "claude-session-tabs",
   "displayName": "Claude Code Tabs",
   "description": "Chrome-style tab management for Claude Code — grouped, colored sessions with rich hover previews.",
-  "version": "0.1.18",
+  "version": "0.2.0",
   "publisher": "yousefkadah",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -58,6 +58,11 @@
         {
           "id": "claudeSessionTabs",
           "name": "Sessions",
+          "icon": "resources/claude-tabs.svg"
+        },
+        {
+          "id": "claudeSessionTabsWorktrees",
+          "name": "Branches",
           "icon": "resources/claude-tabs.svg"
         }
       ],
@@ -185,6 +190,29 @@
         "title": "Disable Real-time Attention",
         "category": "Claude Code Tabs",
         "icon": "$(bell-slash)"
+      },
+      {
+        "command": "claudeSessionTabs.groupByBranch",
+        "title": "Group by Branch",
+        "category": "Claude Code Tabs",
+        "icon": "$(git-branch)"
+      },
+      {
+        "command": "claudeSessionTabs.groupByGroup",
+        "title": "Group by Group",
+        "category": "Claude Code Tabs",
+        "icon": "$(list-tree)"
+      },
+      {
+        "command": "claudeSessionTabs.newBranchSession",
+        "title": "New Branch Session…",
+        "category": "Claude Code Tabs",
+        "icon": "$(add)"
+      },
+      {
+        "command": "claudeSessionTabs.openWorktreeSession",
+        "title": "Open Worktree Session",
+        "category": "Claude Code Tabs"
       }
     ],
     "menus": {
@@ -203,6 +231,26 @@
           "command": "claudeSessionTabs.refresh",
           "when": "view =~ /^claudeSessionTabs(Inline)?$/",
           "group": "navigation@3"
+        },
+        {
+          "command": "claudeSessionTabs.groupByBranch",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && !claudeSessionTabs.branchMode",
+          "group": "navigation@0"
+        },
+        {
+          "command": "claudeSessionTabs.groupByGroup",
+          "when": "view =~ /^claudeSessionTabs(Inline)?$/ && claudeSessionTabs.branchMode",
+          "group": "navigation@0"
+        },
+        {
+          "command": "claudeSessionTabs.newBranchSession",
+          "when": "view == claudeSessionTabsWorktrees",
+          "group": "navigation@1"
+        },
+        {
+          "command": "claudeSessionTabs.refresh",
+          "when": "view == claudeSessionTabsWorktrees",
+          "group": "navigation@2"
         },
         {
           "command": "claudeSessionTabs.enableAttention",
@@ -353,6 +401,10 @@
         {
           "command": "claudeSessionTabs.disableAttention",
           "when": "claudeSessionTabs.attentionInstalled"
+        },
+        {
+          "command": "claudeSessionTabs.openWorktreeSession",
+          "when": "false"
         }
       ]
     },

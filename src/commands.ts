@@ -1,8 +1,12 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
 import { AttentionStore } from './data/attentionStore';
+import { addWorktree, listBranches } from './data/git';
+import { writeNewSessionHandoff, writeOpenHandoff } from './data/handoff';
 import { SessionTreeProvider, TreeNode, UNGROUPED_ID } from './view/sessionTree';
+import { WtNode } from './view/worktreeTree';
 import { StripHandlers } from './view/strip/stripView';
 import { showSubagentPanel } from './view/subagent/subagentPanel';
 import { formatRelative, truncate } from './util/format';
@@ -25,12 +29,14 @@ export interface ExtensionServices {
   attention: AttentionStore;
   /** Fire-and-forget rebuild of the tree + strip. */
   rebuild: () => void;
+  /** Fire-and-forget rebuild of the Worktrees view. */
+  refreshWorktrees: () => void;
   /** Re-evaluate hook install state: (re)start/stop the watcher and rescan markers. */
   syncAttention: () => void;
 }
 
 export function registerCommands(context: vscode.ExtensionContext, services: ExtensionServices): void {
-  const { store, groups, provider, attention, rebuild, syncAttention } = services;
+  const { store, groups, provider, attention, rebuild, refreshWorktrees, syncAttention } = services;
   const reg = (id: string, fn: (...args: never[]) => unknown): void => {
     context.subscriptions.push(vscode.commands.registerCommand(id, fn as (...args: unknown[]) => unknown));
   };
@@ -38,6 +44,7 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
   reg('claudeSessionTabs.refresh', () => {
     store.invalidateAll();
     rebuild();
+    refreshWorktrees();
   });
 
   reg('claudeSessionTabs.openSession', async (node?: TreeNode) => {
@@ -63,6 +70,89 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     if (node?.kind === 'subagent') {
       await showSubagentPanel(node.sub);
     }
+  });
+
+  // Open a session from the Worktrees view. In this worktree → open normally.
+  // In another worktree → open that folder in a new window and resume it there.
+  reg('claudeSessionTabs.openWorktreeSession', async (node?: WtNode) => {
+    if (!node || node.kind !== 'wtsession') {
+      return;
+    }
+    const id = node.entry.meta.id;
+    if (node.isCurrent) {
+      const e = provider.getEntry(id);
+      await openById(id, e?.open ? undefined : provider.getClaudeColumn());
+      return;
+    }
+    const title = node.entry.meta.title || 'Session';
+    const pick = await vscode.window.showInformationMessage(
+      `"${title}" is on branch ${node.worktree.branch} in another worktree. Open that worktree in a new window and resume it?`,
+      'Open in New Window',
+    );
+    if (pick !== 'Open in New Window') {
+      return;
+    }
+    writeOpenHandoff(node.worktree.path, id, Date.now());
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(node.worktree.path), {
+      forceNewWindow: true,
+    });
+  });
+
+  // Create a git worktree for a branch and start a fresh Claude session in it.
+  reg('claudeSessionTabs.newBranchSession', async () => {
+    const cwd = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!cwd) {
+      void vscode.window.showInformationMessage('Open a folder first.');
+      return;
+    }
+    const branches = await listBranches(cwd);
+    type Item = vscode.QuickPickItem & { branch?: string; create?: boolean };
+    const items: Item[] = [
+      { label: '$(add) New branch…', create: true },
+      ...branches.map((b) => ({ label: `$(git-branch) ${b}`, branch: b })),
+    ];
+    const pick = await vscode.window.showQuickPick(items, {
+      placeHolder: 'Branch to run in a new worktree',
+    });
+    if (!pick) {
+      return;
+    }
+    let branch: string;
+    let createBranch: boolean;
+    if (pick.create) {
+      const name = await vscode.window.showInputBox({
+        prompt: 'New branch name',
+        placeHolder: 'e.g. feature/login',
+        validateInput: (v) => (v.trim() ? undefined : 'Enter a branch name'),
+      });
+      if (!name || !name.trim()) {
+        return;
+      }
+      branch = name.trim();
+      createBranch = true;
+    } else {
+      branch = pick.branch as string;
+      createBranch = false;
+    }
+    const safe = branch.replace(/[^A-Za-z0-9._-]/g, '-');
+    const defaultDest = path.join(path.dirname(cwd), `${path.basename(cwd)}-${safe}`);
+    const dest = await vscode.window.showInputBox({
+      prompt: 'Worktree location (a new folder)',
+      value: defaultDest,
+      valueSelection: [defaultDest.length, defaultDest.length],
+    });
+    if (!dest || !dest.trim()) {
+      return;
+    }
+    const res = await addWorktree(cwd, dest.trim(), branch, createBranch);
+    if (!res.ok) {
+      void vscode.window.showErrorMessage(`git worktree add failed: ${res.error}`);
+      return;
+    }
+    writeNewSessionHandoff(dest.trim(), Date.now());
+    await vscode.commands.executeCommand('vscode.openFolder', vscode.Uri.file(dest.trim()), {
+      forceNewWindow: true,
+    });
   });
 
   reg('claudeSessionTabs.newGroup', async () => {
@@ -135,16 +225,27 @@ export function registerCommands(context: vscode.ExtensionContext, services: Ext
     }
   });
 
-  // Show/Hide closed sessions in a group (both share one handler; two commands only
-  // so the inline icon can differ by current state).
+  // Show/Hide closed sessions in a bucket (both share one handler; two commands only
+  // so the inline icon can differ by current state). node.key covers groups, Ungrouped,
+  // and branch buckets alike.
   const toggleInactive = async (node?: TreeNode): Promise<void> => {
     if (node?.kind !== 'group') {
       return;
     }
-    await groups.toggleShowInactive(node.group ? node.group.id : UNGROUPED_ID);
+    await groups.toggleShowInactive(node.key);
   };
   reg('claudeSessionTabs.showInactive', toggleInactive);
   reg('claudeSessionTabs.hideInactive', toggleInactive);
+
+  // Toggle between grouping by user groups and grouping by git branch.
+  reg('claudeSessionTabs.groupByBranch', async () => {
+    await groups.setGroupByBranch(true);
+    void vscode.commands.executeCommand('setContext', 'claudeSessionTabs.branchMode', true);
+  });
+  reg('claudeSessionTabs.groupByGroup', async () => {
+    await groups.setGroupByBranch(false);
+    void vscode.commands.executeCommand('setContext', 'claudeSessionTabs.branchMode', false);
+  });
 
   reg('claudeSessionTabs.enableAttention', async () => {
     const proceed = await vscode.window.showInformationMessage(
@@ -249,7 +350,7 @@ export function createStripHandlers(services: ExtensionServices): StripHandlers 
   };
 }
 
-async function openById(sessionId: string, column?: vscode.ViewColumn): Promise<void> {
+export async function openById(sessionId: string, column?: vscode.ViewColumn): Promise<void> {
   // For an already-open session, pass ViewColumn.Active so Claude reveals/focuses it
   // in place. For a closed one, pass the Claude tabs' column so it opens beside them
   // rather than over the code editor.
@@ -277,7 +378,7 @@ async function openById(sessionId: string, column?: vscode.ViewColumn): Promise<
  * `column` (where the existing Claude tabs live) when known, so the new session
  * lands beside them instead of over the code editor.
  */
-async function startNewConversation(column?: vscode.ViewColumn): Promise<void> {
+export async function startNewConversation(column?: vscode.ViewColumn): Promise<void> {
   const target = column ?? vscode.ViewColumn.Active;
   try {
     await vscode.commands.executeCommand('claude-vscode.editor.open', undefined, undefined, target);

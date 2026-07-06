@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import { SessionStore } from '../data/sessionStore';
 import { GroupStore } from '../data/groupStore';
-import { GroupDef, LiveTab, SessionEntry, SessionStatus, StripData, StripSession, SubagentInfo } from '../model/types';
+import { GroupDef, LiveTab, SessionEntry, StripData, StripSession, SubagentInfo } from '../model/types';
 import {
   claudeTruncateLabel,
   escapeMd,
@@ -10,6 +10,7 @@ import {
   normalizeLabel,
   truncate,
 } from '../util/format';
+import { makeSessionTreeItem, statusOf } from './sessionItem';
 
 const DND_MIME = 'application/vnd.claude-session-tabs';
 /** Key for the implicit Ungrouped bucket in per-group persisted state (show-inactive). */
@@ -26,43 +27,6 @@ const SUBAGENT_ACTIVE_MS = 60_000;
 
 function isSubagentRunning(s: SubagentInfo): boolean {
   return Date.now() - s.mtimeMs < SUBAGENT_ACTIVE_MS;
-}
-
-/**
- * Whether the session is waiting on you. Two signals, either one is enough:
- * - `pendingAsk` (transcript): Claude's last turn ended on an unanswered
- *   AskUserQuestion / ExitPlanMode. Authoritative but lags transcript writes.
- * - a hook marker (`attentionMtime`): fired the instant Claude asked, so it's
- *   lag-free. We trust it until the transcript catches up *past* it and shows
- *   the ask resolved — that reconciliation clears a stale marker without flicker.
- */
-function needsAction(e: SessionEntry): boolean {
-  if (e.meta.pendingAsk) {
-    return true;
-  }
-  return e.attentionMtime !== undefined && e.meta.mtimeMs <= e.attentionMtime;
-}
-
-/**
- * Session status from what we can observe:
- * - closed: no live tab.
- * - needs-action: waiting on you (see needsAction).
- * - active: the tab you're currently viewing.
- * - open: open but idle.
- * (There's no real-time "Claude is generating" signal — the transcript isn't written live —
- * so we don't try to show one.)
- */
-function statusOf(e: SessionEntry): SessionStatus {
-  if (!e.open) {
-    return 'closed';
-  }
-  if (needsAction(e)) {
-    return 'needs-action';
-  }
-  if (e.live?.isActive) {
-    return 'active';
-  }
-  return 'open';
 }
 
 /** Sort priority: pinned, then needs-action, then active, then open, then closed. */
@@ -98,6 +62,10 @@ export class GroupTreeNode {
     public hiddenCount = 0,
     /** Whether this group is currently revealing its closed sessions. */
     public showingInactive = false,
+    /** The show-inactive persistence key (group id, UNGROUPED_ID, or "branch:<name>"). */
+    public key: string = group ? group.id : UNGROUPED_ID,
+    /** Set when this bucket is a branch (group-by-branch mode) rather than a user group. */
+    public branch?: string,
   ) {}
 }
 
@@ -116,9 +84,19 @@ export type TreeNode = GroupTreeNode | SessionTreeNode | SubagentTreeNode;
 /** A group with its display-filtered entries and how many closed ones are hidden. */
 interface ComputedGroup {
   group: GroupDef | null;
+  /** Show-inactive persistence key (group id, UNGROUPED_ID, or "branch:<name>"). */
+  key: string;
+  /** Set when this bucket is a branch (group-by-branch mode). */
+  branch?: string;
   entries: SessionEntry[];
   hidden: number;
   showingInactive: boolean;
+}
+
+/** The branch a session ran on, normalized; sessions with no/detached branch share a bucket. */
+function branchOf(e: SessionEntry): string {
+  const b = e.meta.gitBranch;
+  return b && b !== 'HEAD' ? b : '(no branch)';
 }
 
 export class SessionTreeProvider
@@ -349,19 +327,21 @@ export class SessionTreeProvider
     return vis;
   }
 
-  private groupKey(g: GroupDef | null): string {
-    return g ? g.id : UNGROUPED_ID;
-  }
-
   /**
-   * Apply the per-group "show active only" default. Unless the group is revealing its
+   * Apply the per-group "show active only" default. Unless the bucket is revealing its
    * closed sessions, drop the ones that are neither open nor pinned (pinning is an
-   * explicit keep-visible signal), reporting how many were hidden.
+   * explicit keep-visible signal), reporting how many were hidden. `key` identifies the
+   * bucket for show-inactive persistence (group id, UNGROUPED_ID, or "branch:<name>").
    */
-  private applyInactiveFilter(group: GroupDef | null, sorted: SessionEntry[]): ComputedGroup {
-    const showingInactive = this.groups.isShowInactive(this.groupKey(group));
+  private applyInactiveFilter(
+    key: string,
+    group: GroupDef | null,
+    branch: string | undefined,
+    sorted: SessionEntry[],
+  ): ComputedGroup {
+    const showingInactive = this.groups.isShowInactive(key);
     if (showingInactive) {
-      return { group, entries: sorted, hidden: 0, showingInactive };
+      return { key, group, branch, entries: sorted, hidden: 0, showingInactive };
     }
     const entries: SessionEntry[] = [];
     let hidden = 0;
@@ -372,12 +352,17 @@ export class SessionTreeProvider
         hidden++;
       }
     }
-    return { group, entries, hidden, showingInactive };
+    return { key, group, branch, entries, hidden, showingInactive };
   }
 
-  /** Group the currently-visible entries; shared by the tree and the webview strip. */
+  /** Group the visible entries for the tree — by branch or by user groups per the toggle. */
   private computeGroups(): ComputedGroup[] {
     const vis = this.visibleEntries();
+    return this.groups.isGroupByBranch() ? this.computeBranchGroups(vis) : this.computeUserGroups(vis);
+  }
+
+  /** Bucket visible entries into the user's named groups + Ungrouped. */
+  private computeUserGroups(vis: SessionEntry[]): ComputedGroup[] {
     const byGroup = new Map<string, SessionEntry[]>();
     const ungrouped: SessionEntry[] = [];
     for (const e of vis) {
@@ -394,18 +379,36 @@ export class SessionTreeProvider
     }
     const out: ComputedGroup[] = [];
     for (const g of this.groups.groups) {
-      out.push(this.applyInactiveFilter(g, sortEntries(byGroup.get(g.id) ?? [])));
+      out.push(this.applyInactiveFilter(g.id, g, undefined, sortEntries(byGroup.get(g.id) ?? [])));
     }
     if (ungrouped.length) {
-      out.push(this.applyInactiveFilter(null, sortEntries(ungrouped)));
+      out.push(this.applyInactiveFilter(UNGROUPED_ID, null, undefined, sortEntries(ungrouped)));
     }
     return out;
+  }
+
+  /** Bucket visible entries by the branch each session ran on, most-recent branch first. */
+  private computeBranchGroups(vis: SessionEntry[]): ComputedGroup[] {
+    const byBranch = new Map<string, SessionEntry[]>();
+    for (const e of vis) {
+      const b = branchOf(e);
+      const list = byBranch.get(b);
+      if (list) {
+        list.push(e);
+      } else {
+        byBranch.set(b, [e]);
+      }
+    }
+    const recency = (list: SessionEntry[]): number => list.reduce((m, e) => Math.max(m, e.meta.mtimeMs), 0);
+    return [...byBranch.entries()]
+      .sort((a, b) => recency(b[1]) - recency(a[1]))
+      .map(([branch, list]) => this.applyInactiveFilter(`branch:${branch}`, null, branch, sortEntries(list)));
   }
 
   getChildren(element?: TreeNode): TreeNode[] {
     if (!element) {
       return this.computeGroups().map(
-        (c) => new GroupTreeNode(c.group, c.entries, c.hidden, c.showingInactive),
+        (c) => new GroupTreeNode(c.group, c.entries, c.hidden, c.showingInactive, c.key, c.branch),
       );
     }
     if (element.kind === 'group') {
@@ -420,9 +423,9 @@ export class SessionTreeProvider
     return [];
   }
 
-  /** Serializable snapshot for the webview strip. */
+  /** Serializable snapshot for the webview strip. Always user-groups (branch mode is tree-only). */
   getSnapshot(): StripData {
-    const groups = this.computeGroups().map(({ group, entries, hidden, showingInactive }) => ({
+    const groups = this.computeUserGroups(this.visibleEntries()).map(({ group, entries, hidden, showingInactive }) => ({
       id: group ? group.id : null,
       name: group ? group.name : 'Ungrouped',
       colorVar: group ? themeColorVar(group.color) : null,
@@ -485,13 +488,39 @@ export class SessionTreeProvider
   }
 
   private groupItem(node: GroupTreeNode): vscode.TreeItem {
+    if (node.branch !== undefined) {
+      return this.branchItem(node);
+    }
     const g = node.group;
     const label = g ? g.name : 'Ungrouped';
     const collapsed = g?.collapsed
       ? vscode.TreeItemCollapsibleState.Collapsed
       : vscode.TreeItemCollapsibleState.Expanded;
     const item = new vscode.TreeItem(label, collapsed);
-    item.id = 'group:' + (g ? g.id : UNGROUPED_ID);
+    item.id = 'group:' + node.key;
+    item.description = this.bucketDescription(node);
+    // The state token drives which eye action (show/hide) is offered inline.
+    const base = g ? 'group' : 'ungrouped';
+    item.contextValue = `${base} ${node.showingInactive ? 'showing-inactive' : 'hiding-inactive'}`;
+    item.iconPath = g
+      ? new vscode.ThemeIcon('folder', new vscode.ThemeColor(g.color))
+      : new vscode.ThemeIcon('inbox');
+    return item;
+  }
+
+  /** A branch bucket row (group-by-branch mode). Read-only w.r.t. group editing. */
+  private branchItem(node: GroupTreeNode): vscode.TreeItem {
+    const item = new vscode.TreeItem(node.branch ?? '(no branch)', vscode.TreeItemCollapsibleState.Expanded);
+    item.id = 'branch:' + node.key;
+    item.description = this.bucketDescription(node);
+    item.iconPath = new vscode.ThemeIcon('git-branch');
+    // "branch" (not "group") so group rename/delete menus don't apply; the eye toggle does.
+    item.contextValue = `branch ${node.showingInactive ? 'showing-inactive' : 'hiding-inactive'}`;
+    return item;
+  }
+
+  /** "2 open · 5 · 3 hidden" style count line shared by group + branch rows. */
+  private bucketDescription(node: GroupTreeNode): string {
     const shown = node.entries.length;
     const open = node.entries.filter((e) => e.open).length;
     const parts: string[] = [];
@@ -504,118 +533,23 @@ export class SessionTreeProvider
     if (node.hiddenCount) {
       parts.push(`${node.hiddenCount} hidden`);
     }
-    item.description = parts.join(' · ') || '0';
-    // The state token drives which eye action (show/hide) is offered inline.
-    const base = g ? 'group' : 'ungrouped';
-    item.contextValue = `${base} ${node.showingInactive ? 'showing-inactive' : 'hiding-inactive'}`;
-    item.iconPath = g
-      ? new vscode.ThemeIcon('folder', new vscode.ThemeColor(g.color))
-      : new vscode.ThemeIcon('inbox');
-    return item;
+    return parts.join(' · ') || '0';
   }
 
   private sessionItem(node: SessionTreeNode): vscode.TreeItem {
     const e = node.entry;
-    // Expandable only when there's a live subagent to show.
-    const collapsible = e.subagents.some(isSubagentRunning)
-      ? vscode.TreeItemCollapsibleState.Collapsed
-      : vscode.TreeItemCollapsibleState.None;
-    const item = new vscode.TreeItem(e.meta.title || 'Claude Code', collapsible);
-    item.id = 'session:' + e.meta.id;
-    item.description = this.sessionDescription(e);
-    item.tooltip = this.buildTooltip(e);
-    item.iconPath = this.sessionIcon(e);
-    item.contextValue = this.sessionContext(e);
-    if (e.meta.filePath) {
-      item.command = { command: 'claudeSessionTabs.openSession', title: 'Open', arguments: [node] };
-    }
-    return item;
-  }
-
-  private sessionDescription(e: SessionEntry): string {
-    const parts: string[] = [];
-    if (e.pinned) {
-      parts.push('📌');
-    }
-    if (e.meta.gitBranch && e.meta.gitBranch !== 'HEAD') {
-      parts.push(e.meta.gitBranch);
-    }
-    if (e.meta.contextTokens > 0) {
-      parts.push(formatTokens(e.meta.contextTokens));
-    }
-    parts.push(formatRelative(e.meta.mtimeMs));
-    return parts.join(' · ');
-  }
-
-  private sessionIcon(e: SessionEntry): vscode.ThemeIcon {
-    switch (statusOf(e)) {
-      case 'needs-action':
-        return new vscode.ThemeIcon('bell-dot', new vscode.ThemeColor('charts.yellow'));
-      case 'active':
-        return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.green'));
-      case 'open':
-        return new vscode.ThemeIcon('circle-filled', new vscode.ThemeColor('charts.blue'));
-      default:
-        return e.pinned ? new vscode.ThemeIcon('pinned') : new vscode.ThemeIcon('circle-outline');
-    }
+    return makeSessionTreeItem(e, {
+      // Expandable only when there's a live subagent to show.
+      collapsible: e.subagents.some(isSubagentRunning),
+      command: e.meta.filePath
+        ? { command: 'claudeSessionTabs.openSession', title: 'Open', arguments: [node] }
+        : undefined,
+    });
   }
 
   /** Number of open sessions waiting on the user (needs-action) — drives the view badge. */
   getAttentionCount(): number {
     return this.entries.filter((e) => statusOf(e) === 'needs-action').length;
-  }
-
-  private sessionContext(e: SessionEntry): string {
-    const flags = ['session'];
-    flags.push(e.open ? 'open' : 'closed');
-    flags.push(e.pinned ? 'pinned' : 'unpinned');
-    flags.push(e.groupId ? 'grouped' : 'ungrouped');
-    return flags.join(' ');
-  }
-
-  private buildTooltip(e: SessionEntry): vscode.MarkdownString {
-    const m = e.meta;
-    const md = new vscode.MarkdownString();
-    md.supportThemeIcons = true; // isTrusted stays false — command links won't run
-    md.appendMarkdown(`### ${escapeMd(m.title || 'Claude Code')}\n\n`);
-
-    const STATUS_LABEL: Record<SessionStatus, string> = {
-      active: '$(circle-filled) Active',
-      'needs-action': '$(bell-dot) Waiting for you',
-      open: '$(circle-filled) Open',
-      closed: '$(circle-outline) Closed',
-    };
-    md.appendMarkdown(STATUS_LABEL[statusOf(e)]);
-    if (e.pinned) {
-      md.appendMarkdown('  ·  $(pinned) Pinned');
-    }
-    md.appendMarkdown('\n\n');
-
-    if (m.lastUserText) {
-      md.appendMarkdown(`**You:** ${escapeMd(truncate(m.lastUserText, 220))}\n\n`);
-    }
-    if (m.lastAssistantText) {
-      md.appendMarkdown(`**Claude:** ${escapeMd(truncate(m.lastAssistantText, 220))}\n\n`);
-    }
-
-    const meta: string[] = [];
-    if (m.gitBranch) {
-      meta.push(`$(git-branch) ${escapeMd(m.gitBranch)}`);
-    }
-    if (m.contextTokens > 0) {
-      meta.push(`$(database) ${formatTokens(m.contextTokens)}${m.approx ? '~' : ''} ctx`);
-    }
-    if (m.messageCount > 0) {
-      meta.push(`$(comment-discussion) ${m.messageCount}${m.approx ? '+' : ''} msg`);
-    }
-    meta.push(`$(history) ${formatRelative(m.mtimeMs)}`);
-    if (meta.length) {
-      md.appendMarkdown('---\n\n' + meta.join('  ·  '));
-    }
-    if (m.filePath) {
-      md.appendMarkdown(`\n\n$(file) \`${escapeMd(m.id)}\``);
-    }
-    return md;
   }
 
   // --- Drag & drop: move sessions between groups ---

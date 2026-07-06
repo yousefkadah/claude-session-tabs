@@ -3,6 +3,23 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.0] — 2026-07-07
+
+### Added
+- **Multi-branch / git-worktree support** — run and organize several Claude sessions
+  across branches of the same repo.
+  - **Group by Branch** — a toggle (git-branch icon) on the Sessions view buckets your
+    sessions by the branch each ran on, most-recent branch first. Works with the
+    show/hide-closed control per branch.
+  - **Branches view** — a new view listing this repo's git worktrees (via
+    `git worktree list`), each expandable to its sessions with the same hover previews.
+    One place to see every branch you're working in parallel.
+  - **Open across worktrees** — clicking a session that lives in another worktree offers
+    to open that worktree in a new window and resume the exact session there, via a
+    single-use local hand-off file.
+  - **New Branch Session…** — one action creates a git worktree for a branch (new or
+    existing) and starts a fresh Claude session in it.
+
 ## [0.1.18] — 2026-07-04
 
 ### Added

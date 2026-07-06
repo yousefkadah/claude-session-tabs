@@ -40,6 +40,18 @@ export class GroupStore implements vscode.Disposable {
     return this.state.showInactive?.includes(key) ?? false;
   }
 
+  /** Whether the tree buckets sessions by git branch instead of user groups. */
+  isGroupByBranch(): boolean {
+    return this.state.groupByBranch ?? false;
+  }
+
+  async setGroupByBranch(on: boolean): Promise<void> {
+    if (this.isGroupByBranch() !== on) {
+      this.state.groupByBranch = on;
+      await this.save();
+    }
+  }
+
   /** Flip a group's "reveal closed sessions" flag. */
   async toggleShowInactive(key: string): Promise<void> {
     const arr = this.state.showInactive ?? (this.state.showInactive = []);

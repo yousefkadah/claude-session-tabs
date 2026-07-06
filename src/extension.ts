@@ -2,9 +2,17 @@ import * as vscode from 'vscode';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
 import { AttentionStore } from './data/attentionStore';
+import { consumeHandoff } from './data/handoff';
 import { GroupTreeNode, SessionTreeProvider, TreeNode } from './view/sessionTree';
+import { WorktreeTreeProvider, WtNode } from './view/worktreeTree';
 import { StripViewProvider } from './view/strip/stripView';
-import { ExtensionServices, createStripHandlers, registerCommands } from './commands';
+import {
+  ExtensionServices,
+  createStripHandlers,
+  openById,
+  registerCommands,
+  startNewConversation,
+} from './commands';
 import { debounce } from './util/async';
 
 export function activate(context: vscode.ExtensionContext): void {
@@ -45,6 +53,15 @@ export function activate(context: vscode.ExtensionContext): void {
     );
   }
 
+  // The Worktrees ("Branches") view: this repo's git worktrees, each with its
+  // sessions — the hub for running different branches in parallel. Read-only for
+  // other worktrees (clicking one offers to open it in a new window).
+  const worktrees = new WorktreeTreeProvider(cwd);
+  const worktreeView = vscode.window.createTreeView<WtNode>('claudeSessionTabsWorktrees', {
+    treeDataProvider: worktrees,
+  });
+  context.subscriptions.push(worktrees, worktreeView);
+
   // Tracks deactivation so async setup (below) doesn't register after teardown.
   let disposed = false;
   context.subscriptions.push({ dispose: () => (disposed = true) });
@@ -81,6 +98,20 @@ export function activate(context: vscode.ExtensionContext): void {
   };
   const debouncedRebuild = debounce(() => void rebuild(), 250);
 
+  // Worktree data is cross-window (other worktrees' transcripts), so it refreshes on
+  // its own cadence: activation, the periodic tick, view focus, and manual Refresh.
+  const rebuildWorktrees = async (): Promise<void> => {
+    await worktrees.build();
+    worktrees.refresh();
+  };
+  context.subscriptions.push(
+    worktreeView.onDidChangeVisibility((e) => {
+      if (e.visible) {
+        void rebuildWorktrees();
+      }
+    }),
+  );
+
   // Real-time "needs you" bell, driven by Claude Code hooks (opt-in). Hooks write
   // marker files into attention.d; we watch that directory and re-scan on change.
   const attention = new AttentionStore(context.extensionUri);
@@ -116,6 +147,7 @@ export function activate(context: vscode.ExtensionContext): void {
     provider,
     attention,
     rebuild: () => void rebuild(),
+    refreshWorktrees: () => void rebuildWorktrees(),
     syncAttention,
   };
 
@@ -158,6 +190,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const timer = setInterval(() => {
     provider.refresh();
     updateBadge();
+    void rebuildWorktrees();
   }, 15_000);
   context.subscriptions.push({ dispose: () => clearInterval(timer) });
 
@@ -172,9 +205,29 @@ export function activate(context: vscode.ExtensionContext): void {
   );
 
   void rebuild();
+  void rebuildWorktrees();
   // Sets the installed context key and, if hooks are already installed, starts
   // the attention watcher and does an initial scan.
   syncAttention();
+  void vscode.commands.executeCommand('setContext', 'claudeSessionTabs.branchMode', groups.isGroupByBranch());
+
+  // Phase 3: if this window was opened by a "resume in worktree" / "new branch"
+  // hand-off, consume it and act once Claude Code has had a moment to activate.
+  const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+  const handoff = folders.length ? consumeHandoff(folders, Date.now()) : undefined;
+  if (handoff) {
+    const t = setTimeout(() => {
+      if (disposed) {
+        return;
+      }
+      if (handoff.sessionId) {
+        void openById(handoff.sessionId, provider.getClaudeColumn());
+      } else {
+        void startNewConversation(provider.getClaudeColumn());
+      }
+    }, 1500);
+    context.subscriptions.push({ dispose: () => clearTimeout(t) });
+  }
 }
 
 export function deactivate(): void {
