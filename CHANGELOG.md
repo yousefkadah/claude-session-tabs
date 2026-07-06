@@ -3,6 +3,17 @@
 All notable changes to **Claude Code Tabs** are documented here.
 This project adheres to [Semantic Versioning](https://semver.org/).
 
+## [0.2.1] — 2026-07-07
+
+### Added
+- **Attention sound + notification.** With Real-time Attention enabled, a session that
+  starts waiting on you now also **plays a sound** and **shows a notification** — a
+  native OS banner when VS Code is in the background, or an in-app toast with a
+  **Reveal** button when it's focused. Fires once on the transition into "needs you"
+  (not on every refresh) and only for the window that owns the session. New settings:
+  `attentionSound`, `attentionNotification`, `attentionSoundName` (macOS sound). All
+  best-effort and local — nothing leaves your machine.
+
 ## [0.2.0] — 2026-07-07
 
 ### Added

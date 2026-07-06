@@ -27,7 +27,7 @@
 - **🫥 Active by default, reveal on demand** — every group (and **Ungrouped**) shows only its **active/open** (and pinned) sessions, with a `N hidden` count. Hit the **👁 eye** on the group to reveal its closed sessions, and again to collapse back. The choice sticks per group.
 - **⎇ Branches & worktrees** — **group your sessions by git branch** with one toggle, or open the **Branches** view to see every **git worktree** of the repo with its sessions. Run different branches in parallel, jump into another worktree's session (it opens in a new window), or spin up a **New Branch Session** that creates a worktree and starts Claude there. See [Branches & worktrees](#-branches--worktrees).
 - **🔔 Waiting-for-you alerts** — when Claude's last turn was an unanswered **question or plan** (`AskUserQuestion` / `ExitPlanMode`), that session floats to the top with a **bell + count badge** on the icon. A real transcript signal — no manual flagging.
-- **⚡ Real-time attention (opt-in)** — enable **Claude Code hooks** from the view's **⋯** menu and the bell lights the *instant* Claude asks, plans, or needs permission — no transcript lag. It clears the moment you reply, is fully reversible, and stays 100% local (a marker folder the extension watches). See [Real-time attention](#-real-time-attention-optional).
+- **⚡ Real-time attention (opt-in)** — enable **Claude Code hooks** from the view's **⋯** menu and the bell lights the *instant* Claude asks, plans, or needs permission — no transcript lag — with an optional **sound + OS notification** so you don't miss it. It clears the moment you reply, is fully reversible, and stays 100% local (a marker folder the extension watches). See [Real-time attention](#-real-time-attention-optional).
 - **🤖 Live subagents** — expand a session to see the subagents Claude is **currently running** inside it (finished ones are hidden); **click one** to open a panel of its task and what it did.
 - **👀 Rich hover preview** — the last **You / Claude** messages, git branch, context‑token count, message count, and last‑active time — without opening the session.
 - **🟢 Live status** — at a glance: **active** (green), **waiting for you** (🔔 yellow), **open** (blue), **closed** (outline).
@@ -85,6 +85,8 @@ By default the bell reads the transcript, which Claude Code doesn't flush in rea
 | `UserPromptSubmit` | you reply | bell off |
 
 Each hook just writes/removes a marker file under `~/.claude/hooks/claude-tabs/`; the extension watches that folder. **Nothing leaves your machine.** It self-heals — a stale marker is ignored once the transcript catches up — and **Disable Real-time Attention** removes the hooks and scripts, restoring your `settings.json`. Start a new Claude Code session (or reload) after enabling so it picks up the hooks.
+
+**Sound & notification.** When a session starts waiting, the extension also plays a sound and shows a notification: a **native OS banner** when VS Code is in the background, or an **in-app toast with a Reveal button** when it's focused. It fires once per "needs you" transition, for the window that owns the session. Tune it with `claudeSessionTabs.attentionSound`, `claudeSessionTabs.attentionNotification`, and `claudeSessionTabs.attentionSoundName` (macOS sound). Windows/Linux use the system notification sound.
 
 ## ⎇ Branches & worktrees
 

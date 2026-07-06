@@ -1,8 +1,10 @@
 import * as vscode from 'vscode';
+import * as path from 'path';
 import { SessionStore } from './data/sessionStore';
 import { GroupStore } from './data/groupStore';
 import { AttentionStore } from './data/attentionStore';
 import { consumeHandoff } from './data/handoff';
+import { nativeNotify, playSound } from './data/notify';
 import { GroupTreeNode, SessionTreeProvider, TreeNode } from './view/sessionTree';
 import { WorktreeTreeProvider, WtNode } from './view/worktreeTree';
 import { StripViewProvider } from './view/strip/stripView';
@@ -116,9 +118,66 @@ export function activate(context: vscode.ExtensionContext): void {
   // marker files into attention.d; we watch that directory and re-scan on change.
   const attention = new AttentionStore(context.extensionUri);
   let attentionWatcher: vscode.FileSystemWatcher | undefined;
+  // Notify only on the *transition* into "needs you" (a marker id we hadn't seen).
+  let knownAttention = new Set<string>();
+  let attentionBaselined = false;
+
+  const fireAttention = (id: string): void => {
+    const wantSound = cfg().get('attentionSound', true);
+    const wantNotif = cfg().get('attentionNotification', true);
+    if (!wantSound && !wantNotif) {
+      return;
+    }
+    const soundName = cfg().get<string>('attentionSoundName', 'Ping') || 'Ping';
+    const title = provider.getEntry(id)?.meta.title || 'A Claude session';
+    if (vscode.window.state.focused) {
+      // You're in VS Code — show the actionable toast; play the sound alongside.
+      if (wantNotif) {
+        void vscode.window
+          .showInformationMessage(`${title} — Claude is waiting for you`, 'Reveal')
+          .then((pick) => {
+            if (pick === 'Reveal') {
+              void openById(id, provider.getClaudeColumn());
+            }
+          });
+      }
+      if (wantSound) {
+        playSound(soundName);
+      }
+    } else if (wantNotif) {
+      // You're elsewhere — a native banner surfaces it (and carries the sound).
+      nativeNotify('Claude Code', `${title} needs you`, wantSound ? soundName : undefined);
+    } else if (wantSound) {
+      playSound(soundName);
+    }
+  };
+
   const refreshAttention = (): void => {
-    provider.setAttention(attention.scan());
+    const scan = attention.scan();
+    const mtimes = new Map<string, number>();
+    for (const [id, m] of scan) {
+      mtimes.set(id, m.mtimeMs);
+    }
+    provider.setAttention(mtimes);
     void rebuild();
+
+    if (!attentionBaselined) {
+      attentionBaselined = true; // don't fire for markers that already existed at startup
+    } else {
+      const folders = (vscode.workspace.workspaceFolders ?? []).map((f) => f.uri.fsPath);
+      for (const [id, m] of scan) {
+        if (knownAttention.has(id)) {
+          continue; // already knew about it — only fire on the transition
+        }
+        const belongsHere = m.cwd
+          ? folders.some((f) => path.resolve(f) === path.resolve(m.cwd))
+          : !!provider.getEntry(id);
+        if (belongsHere) {
+          fireAttention(id);
+        }
+      }
+    }
+    knownAttention = new Set(scan.keys());
   };
   const syncAttention = (): void => {
     const installed = attention.isInstalled();

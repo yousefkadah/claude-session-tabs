@@ -16,6 +16,12 @@ const MARKER = 'claude-tabs';
 /** A marker older than this is treated as abandoned and pruned (safety net). */
 const STALE_MS = 24 * 60 * 60 * 1000;
 
+/** A live attention marker: when it fired and which session cwd it belongs to. */
+export interface AttentionMarker {
+  mtimeMs: number;
+  cwd: string;
+}
+
 /** One Claude Code hook we register, described for both install and the consent prompt. */
 interface HookSpec {
   event: string;
@@ -78,11 +84,12 @@ export class AttentionStore {
   }
 
   /**
-   * Current per-session attention markers: sessionId -> marker mtime (ms).
-   * Prunes markers older than STALE_MS as it goes so the directory self-cleans.
+   * Current per-session attention markers: sessionId -> { marker mtime, session cwd }.
+   * The cwd (marker file contents) lets callers scope notifications to the window that
+   * owns the session. Prunes markers older than STALE_MS as it goes (self-cleaning).
    */
-  scan(): Map<string, number> {
-    const out = new Map<string, number>();
+  scan(): Map<string, AttentionMarker> {
+    const out = new Map<string, AttentionMarker>();
     let names: string[];
     try {
       names = fs.readdirSync(ATTENTION_DIR);
@@ -101,7 +108,13 @@ export class AttentionStore {
           fs.rmSync(full, { force: true });
           continue;
         }
-        out.set(name, st.mtimeMs);
+        let cwd = '';
+        try {
+          cwd = fs.readFileSync(full, 'utf8').trim();
+        } catch {
+          /* mtime is enough; cwd optional */
+        }
+        out.set(name, { mtimeMs: st.mtimeMs, cwd });
       } catch {
         /* skip unreadable entry */
       }
