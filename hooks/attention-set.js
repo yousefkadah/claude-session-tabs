@@ -32,7 +32,9 @@ process.stdin.on('end', () => {
     if (!sid) {
       return;
     }
-    const dir = path.join(os.homedir(), '.claude', 'hooks', 'claude-tabs', 'attention.d');
+    // Same rule as Claude Code: $CLAUDE_CONFIG_DIR, else ~/.claude.
+    const claudeDir = (process.env.CLAUDE_CONFIG_DIR || '').trim() || path.join(os.homedir(), '.claude');
+    const dir = path.join(claudeDir, 'hooks', 'claude-tabs', 'attention.d');
     fs.mkdirSync(dir, { recursive: true });
     // Overwrite (not append) so the file's mtime tracks the latest attention event.
     fs.writeFileSync(path.join(dir, sid), String(j.cwd || ''));

@@ -1,8 +1,8 @@
 import * as fs from 'fs/promises';
 import * as path from 'path';
-import * as os from 'os';
 import { SessionMeta, SubagentInfo } from '../model/types';
 import { parseSession, readCwd } from './transcript';
+import { claudeConfigDir } from '../util/claudeDir';
 
 interface CacheEntry {
   mtimeMs: number;
@@ -11,7 +11,8 @@ interface CacheEntry {
 }
 
 /**
- * Reads Claude Code session transcripts from ~/.claude/projects/<slug>/*.jsonl.
+ * Reads Claude Code session transcripts from <config dir>/projects/<slug>/*.jsonl
+ * (config dir = $CLAUDE_CONFIG_DIR, else ~/.claude).
  * Results are cached by (mtime,size) so unchanged files are never re-parsed.
  */
 export class SessionStore {
@@ -46,7 +47,7 @@ export class SessionStore {
     if (!this.cwd) {
       return undefined;
     }
-    const base = path.join(os.homedir(), '.claude', 'projects');
+    const base = path.join(claudeConfigDir(), 'projects');
     // Claude derives the slug by replacing every non-alphanumeric character with '-'.
     const slug = this.cwd.replace(/[^A-Za-z0-9]/g, '-');
     const candidate = path.join(base, slug);

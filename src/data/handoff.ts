@@ -1,8 +1,8 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
+import { claudeConfigDir } from '../util/claudeDir';
 
-const HANDOFF_FILE = path.join(os.homedir(), '.claude', 'hooks', 'claude-tabs', 'handoff.json');
+const HANDOFF_FILE = path.join(claudeConfigDir(), 'hooks', 'claude-tabs', 'handoff.json');
 /** A hand-off older than this is ignored (the target window never opened in time). */
 const FRESH_MS = 60_000;
 

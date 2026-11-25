@@ -1,9 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
-import * as os from 'os';
 import * as vscode from 'vscode';
+import { claudeConfigDir } from '../util/claudeDir';
 
-const CLAUDE_DIR = path.join(os.homedir(), '.claude');
+const CLAUDE_DIR = claudeConfigDir();
 const HOOKS_DIR = path.join(CLAUDE_DIR, 'hooks');
 const TABS_DIR = path.join(HOOKS_DIR, 'claude-tabs');
 const ATTENTION_DIR = path.join(TABS_DIR, 'attention.d');

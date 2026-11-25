@@ -23,7 +23,9 @@ process.stdin.on('end', () => {
     if (!sid) {
       return;
     }
-    const f = path.join(os.homedir(), '.claude', 'hooks', 'claude-tabs', 'attention.d', sid);
+    // Same rule as Claude Code: $CLAUDE_CONFIG_DIR, else ~/.claude.
+    const claudeDir = (process.env.CLAUDE_CONFIG_DIR || '').trim() || path.join(os.homedir(), '.claude');
+    const f = path.join(claudeDir, 'hooks', 'claude-tabs', 'attention.d', sid);
     fs.rmSync(f, { force: true });
   } catch {
     // Never interrupt Claude Code.

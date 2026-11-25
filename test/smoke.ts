@@ -5,7 +5,11 @@
  *
  * Run with: npm test
  */
+import * as fs from 'fs';
+import * as os from 'os';
+import * as path from 'path';
 import { SessionStore } from '../src/data/sessionStore';
+import { claudeConfigDir } from '../src/util/claudeDir';
 import { claudeTruncateLabel, formatRelative, formatTokens, normalizeLabel, truncate } from '../src/util/format';
 
 let failures = 0;
@@ -71,6 +75,38 @@ async function main(): Promise<void> {
       ].filter(Boolean);
       console.log(`  • ${claudeTruncateLabel(s.title).padEnd(26)} ${parts.join(' · ')}`);
     }
+  }
+
+  console.log('\nCLAUDE_CONFIG_DIR');
+  check(
+    'claudeConfigDir falls back to ~/.claude',
+    claudeConfigDir({}) === path.join(os.homedir(), '.claude'),
+  );
+  check('claudeConfigDir ignores a blank value', claudeConfigDir({ CLAUDE_CONFIG_DIR: '  ' }) === path.join(os.homedir(), '.claude'));
+  check('claudeConfigDir honours the env var', claudeConfigDir({ CLAUDE_CONFIG_DIR: '/tmp/alt-claude' }) === '/tmp/alt-claude');
+
+  const altRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'claude-tabs-cfg-'));
+  const altCwd = '/work/alt-profile.project';
+  const altProject = path.join(altRoot, 'projects', altCwd.replace(/[^A-Za-z0-9]/g, '-'));
+  fs.mkdirSync(altProject, { recursive: true });
+  fs.writeFileSync(
+    path.join(altProject, 'abc123.jsonl'),
+    JSON.stringify({ type: 'user', cwd: altCwd, message: { role: 'user', content: 'hello from alt profile' } }) + '\n',
+  );
+  const prevCfg = process.env.CLAUDE_CONFIG_DIR;
+  process.env.CLAUDE_CONFIG_DIR = altRoot;
+  try {
+    const altStore = new SessionStore(altCwd);
+    check('SessionStore resolves under CLAUDE_CONFIG_DIR', (await altStore.resolveDir()) === altProject);
+    const altSessions = await altStore.list();
+    check('SessionStore lists sessions under CLAUDE_CONFIG_DIR', altSessions.length === 1 && altSessions[0].id === 'abc123');
+  } finally {
+    if (prevCfg === undefined) {
+      delete process.env.CLAUDE_CONFIG_DIR;
+    } else {
+      process.env.CLAUDE_CONFIG_DIR = prevCfg;
+    }
+    fs.rmSync(altRoot, { recursive: true, force: true });
   }
 
   console.log(`\n${failures === 0 ? 'PASS' : 'FAIL'} — ${failures} failed check(s)`);
